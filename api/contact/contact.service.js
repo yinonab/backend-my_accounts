@@ -52,26 +52,49 @@ async function getById(contactId) {
 	}
 }
 
+// async function remove(contactId) {
+// 	const { loggedinUser } = asyncLocalStorage.getStore()
+// 	const { _id: ownerId, isAdmin } = loggedinUser
+
+// 	try {
+// 		const criteria = {
+// 			_id: ObjectId.createFromHexString(contactId),
+// 		}
+// 		if (!isAdmin) criteria['owner._id'] = ownerId
+
+// 		const collection = await dbService.getCollection('contact')
+// 		const res = await collection.deleteOne(criteria)
+
+// 		if (res.deletedCount === 0) throw ('Not your contact')
+// 		return contactId
+// 	} catch (err) {
+// 		logger.error(`cannot remove contact ${contactId}`, err)
+// 		throw err
+// 	}
+// }
+
 async function remove(contactId) {
-	const { loggedinUser } = asyncLocalStorage.getStore()
-	const { _id: ownerId, isAdmin } = loggedinUser
-
 	try {
-		const criteria = {
-			_id: ObjectId.createFromHexString(contactId),
+		// Convert `contactId` to an ObjectId
+		const criteria = { _id: ObjectId.createFromHexString(contactId) };
+
+		const collection = await dbService.getCollection('contact');
+
+		// Delete the document matching the criteria
+		const result = await collection.deleteOne(criteria);
+
+		if (result.deletedCount === 0) {
+			throw new Error(`Contact with ID ${contactId} not found or not authorized to delete`);
 		}
-		if (!isAdmin) criteria['owner._id'] = ownerId
 
-		const collection = await dbService.getCollection('contact')
-		const res = await collection.deleteOne(criteria)
-
-		if (res.deletedCount === 0) throw ('Not your contact')
-		return contactId
+		logger.info(`Contact ${contactId} deleted successfully`);
+		return contactId; // Return the deleted contact ID
 	} catch (err) {
-		logger.error(`cannot remove contact ${contactId}`, err)
-		throw err
+		logger.error(`Failed to remove contact ${contactId}`, err);
+		throw err;
 	}
 }
+
 
 async function add(contact) {
 	try {
