@@ -13,8 +13,9 @@ export async function login(req, res) {
 		// Set cookie in the controller
 		res.cookie('loginToken', loginToken, {
 			httpOnly: true,
-			sameSite: 'None',
-			secure: process.env.NODE_ENV === 'production',
+			sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax', // Adjust for environment
+			secure: process.env.NODE_ENV === 'production' ? true : false
+			, // Use secure cookies only in production
 		});
 		res.status(200).json(user);
 	} catch (err) {
@@ -41,8 +42,9 @@ export async function signup(req, res) {
 		// Set cookie in the controller
 		res.cookie('loginToken', loginToken, {
 			httpOnly: true,
-			sameSite: 'None',
-			secure: process.env.NODE_ENV === 'production',
+			sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax', // Adjust for environment
+			secure: process.env.NODE_ENV === 'production' ? true : false
+			, // Use secure cookies only in production
 		});
 		res.status(200).json(user);
 	} catch (err) {
@@ -53,9 +55,16 @@ export async function signup(req, res) {
 
 export async function logout(req, res) {
 	try {
-		res.clearCookie('loginToken');
+		// Clear the loginToken cookie
+		res.clearCookie('loginToken', {
+			httpOnly: true,
+			sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax', // Adjust for environment
+			secure: process.env.NODE_ENV === 'production' ? true : false
+			, // Use secure cookies only in production
+		});
 		res.status(200).send({ msg: 'Logged out successfully' });
 	} catch (err) {
+		logger.error('Failed to logout:', err.message);
 		res.status(400).send({ err: 'Failed to logout' });
 	}
 }

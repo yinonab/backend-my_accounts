@@ -2,26 +2,37 @@ import { config } from '../config/index.js'
 import { logger } from '../services/logger.service.js'
 import { asyncLocalStorage } from '../services/als.service.js'
 import Cryptr from 'cryptr';
+import { authService } from '../../backend/api/auth/auth.service.js';
+
 
 const cryptr = new Cryptr(process.env.SECRET || 'Secret-Puk-1234');
 
 
-export function requireAuth(req, res, next) {
-	console.log('Authorization header:', req.headers['authorization']); // Log the header
-	const token = req.headers['authorization']?.split(' ')[1];
-	if (!token) return res.status(401).send('Not Authenticated');
-	console.log('Token:', token);
+export async function requireAuth(req, res, next) {
 	try {
-		const decryptedToken = cryptr.decrypt(token);
-		const loggedinUser = JSON.parse(decryptedToken);
+		console.log('Cookies received:', req.cookies); // Debug log
+
+		const { loginToken } = req.cookies;
+		if (!loginToken) {
+			console.error('Missing loginToken in cookies');
+			return res.status(401).send({ err: 'Not authenticated' });
+		}
+
+		const loggedinUser = authService.validateToken(loginToken);
+		if (!loggedinUser) {
+			console.error('Invalid or expired loginToken');
+			return res.status(401).send({ err: 'Invalid token' });
+		}
+
 		req.loggedinUser = loggedinUser;
-		console.log('Logged in user:', loggedinUser);
 		next();
 	} catch (err) {
-		console.log('Invalid token:', err.message);
-		return res.status(401).send('Invalid token');
+		console.error('Authentication failed:', err.message);
+		res.status(401).send({ err: 'Failed to authenticate' });
 	}
 }
+
+
 
 
 export function requireAdmin(req, res, next) {

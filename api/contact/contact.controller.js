@@ -10,7 +10,7 @@ export async function getContacts(req, res) {
 			// sortDir: req.query.sortDir || 1,
 			// pageIdx: req.query.pageIdx,
 		}
-		const contacts = await contactService.query(filterBy)
+		const contacts = await contactService.query(filterBy, req.loggedinUser)
 		res.json(contacts)
 	} catch (err) {
 		logger.error('Failed to get contacts', err)

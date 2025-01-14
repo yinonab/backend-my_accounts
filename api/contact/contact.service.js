@@ -17,7 +17,7 @@ export const contactService = {
 	removeContactMsg,
 }
 
-async function query(filterBy = { txt: '' }) {
+async function query(filterBy = { txt: '' }, loggedinUser) {
 	try {
 		const criteria = _buildCriteria(filterBy);
 		const sort = _buildSort(filterBy);
@@ -41,7 +41,7 @@ async function query(filterBy = { txt: '' }) {
 				email: 'demo@contact.com',
 				createdAt: new Date(),
 				owner: {
-					_id: '',
+					_id: loggedinUser._id,
 				},
 				msgs: [],
 			};
