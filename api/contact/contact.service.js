@@ -19,7 +19,7 @@ export const contactService = {
 
 async function query(filterBy = { txt: '' }, loggedinUser) {
 	try {
-		const criteria = _buildCriteria(filterBy);
+		const criteria = _buildCriteria(filterBy, loggedinUser);
 		const sort = _buildSort(filterBy);
 
 		const collection = await dbService.getCollection('contact');
@@ -202,13 +202,24 @@ async function removeContactMsg(contactId, msgId) {
 }
 
 
-function _buildCriteria(filterBy) {
+// function _buildCriteria(filterBy) {
+// 	const criteria = {};
+// 	if (filterBy.txt) {
+// 		criteria.name = { $regex: filterBy.txt, $options: 'i' }; // Match name containing `txt`
+// 	}
+// 	return criteria;
+// }
+function _buildCriteria(filterBy, loggedinUser) {
 	const criteria = {};
 	if (filterBy.txt) {
 		criteria.name = { $regex: filterBy.txt, $options: 'i' }; // Match name containing `txt`
 	}
+	if (loggedinUser && loggedinUser._id) {
+		criteria['owner._id'] = loggedinUser._id; // Match contacts owned by the logged-in user
+	}
 	return criteria;
 }
+
 
 
 function _buildSort(filterBy) {
