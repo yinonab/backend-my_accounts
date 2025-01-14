@@ -4,6 +4,7 @@ import { logger } from '../../services/logger.service.js'
 import { makeId } from '../../services/util.service.js'
 import { dbService } from '../../services/db.service.js'
 import { asyncLocalStorage } from '../../services/als.service.js'
+import { log } from '../../middlewares/logger.middleware.js'
 
 const PAGE_SIZE = 3
 
@@ -19,8 +20,11 @@ export const contactService = {
 
 async function query(filterBy = { txt: '' }, loggedinUser) {
 	try {
-		const criteria = _buildCriteria(filterBy, loggedinUser);
+		const criteria = _buildCriteria(filterBy, loggedinUser); // Pass loggedinUser
 		const sort = _buildSort(filterBy);
+		console.log('loggedinUser:', loggedinUser); // Log the sort criteria for debugging
+
+		logger.info('Query criteria:', criteria); // Log the criteria for debugging
 
 		const collection = await dbService.getCollection('contact');
 		var contactCursor = await collection.find(criteria, { sort });
@@ -30,7 +34,6 @@ async function query(filterBy = { txt: '' }, loggedinUser) {
 		}
 
 		let contacts = await contactCursor.toArray();
-
 		// If no contacts exist, create a demo contact
 		if (contacts.length === 0) {
 			logger.info('No contacts found, creating a demo contact.');
@@ -214,11 +217,13 @@ function _buildCriteria(filterBy, loggedinUser) {
 	if (filterBy.txt) {
 		criteria.name = { $regex: filterBy.txt, $options: 'i' }; // Match name containing `txt`
 	}
-	if (loggedinUser && loggedinUser._id) {
+	// Only apply the owner filter if the user is not an admin
+	if (loggedinUser && loggedinUser._id && !loggedinUser.isAdmin) {
 		criteria['owner._id'] = loggedinUser._id; // Match contacts owned by the logged-in user
 	}
 	return criteria;
 }
+
 
 
 
