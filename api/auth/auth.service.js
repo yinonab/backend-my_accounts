@@ -46,6 +46,7 @@ function getLoginToken(user) {
 		_id: user._id,
 		email: user.email,
 		isAdmin: user.isAdmin,
+		name: user.username,
 	};
 	return cryptr.encrypt(JSON.stringify(userInfo));
 }
