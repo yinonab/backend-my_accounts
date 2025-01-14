@@ -10,6 +10,7 @@ export const userService = {
     remove, // Delete (remove user)
     query, // List (of users)
     getByUsername, // Used for Login
+    updateUserProfile,
 }
 
 async function query(filterBy = {}) {
@@ -30,6 +31,28 @@ async function query(filterBy = {}) {
         throw err
     }
 }
+
+async function updateUserProfile(req) {
+    const loggedinUser = req.loggedinUser;
+
+    if (!loggedinUser) {
+        throw new Error('No logged-in user available');
+    }
+
+    // Example logic to update user
+    const userToUpdate = {
+        _id: loggedinUser._id,
+        fullname: req.body.fullname,
+        email: req.body.email,
+    };
+
+    const updatedUser = await dbService
+        .getCollection('user')
+        .updateOne({ _id: ObjectId(userToUpdate._id) }, { $set: userToUpdate });
+
+    return updatedUser;
+}
+
 
 async function getById(userId) {
     try {

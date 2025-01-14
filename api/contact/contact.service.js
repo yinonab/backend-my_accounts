@@ -19,23 +19,44 @@ export const contactService = {
 
 async function query(filterBy = { txt: '' }) {
 	try {
-		const criteria = _buildCriteria(filterBy)
-		const sort = _buildSort(filterBy)
+		const criteria = _buildCriteria(filterBy);
+		const sort = _buildSort(filterBy);
 
-		const collection = await dbService.getCollection('contact')
-		var contactCursor = await collection.find(criteria, { sort })
+		const collection = await dbService.getCollection('contact');
+		var contactCursor = await collection.find(criteria, { sort });
 
 		if (filterBy.pageIdx !== undefined) {
-			contactCursor.skip(filterBy.pageIdx * PAGE_SIZE).limit(PAGE_SIZE)
+			contactCursor.skip(filterBy.pageIdx * PAGE_SIZE).limit(PAGE_SIZE);
 		}
 
-		const contacts = contactCursor.toArray()
-		return contacts
+		let contacts = await contactCursor.toArray();
+
+		// If no contacts exist, create a demo contact
+		if (contacts.length === 0) {
+			logger.info('No contacts found, creating a demo contact.');
+			const demoContact = {
+				_id: new ObjectId(), // Generate a new ObjectId for the demo contact
+				name: 'Demo Contact',
+				phone: '123-456-7890',
+				email: 'demo@contact.com',
+				createdAt: new Date(),
+				owner: {
+					_id: '',
+				},
+				msgs: [],
+			};
+
+			await collection.insertOne(demoContact);
+			contacts = [demoContact]; // Set the demo contact as the return value
+		}
+
+		return contacts;
 	} catch (err) {
-		logger.error('cannot find contacts', err)
-		throw err
+		logger.error('cannot find contacts', err);
+		throw err;
 	}
 }
+
 
 async function getById(contactId) {
 	try {
