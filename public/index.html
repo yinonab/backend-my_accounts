@@ -1,14 +1,39 @@
 <!doctype html>
 <html lang="en" data-critters-container>
+
 <head>
   <meta charset="utf-8">
   <title>MisterBitCoin</title>
   <base href="/">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="icon" type="image/x-icon" href="favicon.ico">
+
+  <script>
+    window.fbAsyncInit = function () {
+      FB.init({
+        appId: '584996800678250',
+        cookie: true,
+        xfbml: true,
+        version: 'v16.0'
+      });
+
+      FB.AppEvents.logPageView();
+
+    };
+
+    (function (d, s, id) {
+      var js, fjs = d.getElementsByTagName(s)[0];
+      if (d.getElementById(id)) { return; }
+      js = d.createElement(s); js.id = id;
+      js.src = "https://connect.facebook.net/en_US/sdk.js";
+      fjs.parentNode.insertBefore(js, fjs);
+    }(document, 'script', 'facebook-jssdk'));
+  </script>
 <style>*{box-sizing:border-box}html{font-size:16px;scroll-behavior:smooth}body{margin:0;min-height:100vh;font-family:monospace;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
 </style><link rel="stylesheet" href="styles-UOOR6GZQ.css" media="print" onload="this.media='all'"><noscript><link rel="stylesheet" href="styles-UOOR6GZQ.css"></noscript></head>
+
 <body>
   <app-root></app-root>
-<script src="polyfills-LZBJRJJE.js" type="module"></script><script src="main-DAUD6MK6.js" type="module"></script></body>
+<script src="polyfills-LZBJRJJE.js" type="module"></script><script src="main-HTH65Q47.js" type="module"></script></body>
+
 </html>
