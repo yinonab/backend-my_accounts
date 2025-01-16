@@ -1,64 +1,109 @@
-import http from 'http'
-import path from 'path'
-import cors from 'cors'
-import express from 'express'
-import cookieParser from 'cookie-parser'
+import http from 'http';
+import path from 'path';
+import cors from 'cors';
+import express from 'express';
+import cookieParser from 'cookie-parser';
+import dotenv from 'dotenv';
 
-import { authRoutes } from './api/auth/auth.routes.js'
-import { userRoutes } from './api/user/user.routes.js'
-import { reviewRoutes } from './api/review/review.routes.js'
-import { contactRoutes } from './api/contact/contact.routes.js'
-import { setupSocketAPI } from './services/socket.service.js'
+// Load environment variables
+dotenv.config();
 
-import { setupAsyncLocalStorage } from './middlewares/setupAls.middleware.js'
+import { authRoutes } from './api/auth/auth.routes.js';
+import { userRoutes } from './api/user/user.routes.js';
+import { reviewRoutes } from './api/review/review.routes.js';
+import { contactRoutes } from './api/contact/contact.routes.js';
+import { setupSocketAPI } from './services/socket.service.js';
+import { setupAsyncLocalStorage } from './middlewares/setupAls.middleware.js';
+import { logger } from './services/logger.service.js';
 
-const app = express()
-const server = http.createServer(app)
+const app = express();
+const server = http.createServer(app);
 
-// Express App Config
-app.use(cookieParser())
-app.use(express.json())
+// Environment variables
+const isProduction = process.env.NODE_ENV === 'production';
+const port = process.env.PORT || 3030;
 
-if (process.env.NODE_ENV === 'production') {
-    app.use(express.static(path.resolve('public')))
+// Log environment
+console.log(`Running in ${process.env.NODE_ENV || 'development'} mode`);
+
+// Middleware
+app.use(cookieParser());
+app.use(express.json());
+
+// CORS Setup
+if (isProduction) {
+    app.use(cors({
+        origin: process.env.FRONTEND_URL || 'https://your-production-frontend.com', // Update with your production frontend URL
+        credentials: true, // Allow cookies to be sent
+    }));
+    console.log(`CORS configured for production: ${process.env.FRONTEND_URL}`);
 } else {
-    const corsOptions = {
-        origin: ['http://127.0.0.1:3000',
+    app.use(cors({
+        origin: [
+            'http://127.0.0.1:3000',
             'http://localhost:3000',
             'http://127.0.0.1:5173',
             'http://localhost:5173',
             'http://localhost:4200',
         ],
-        credentials: true
-    }
-    app.use(cors(corsOptions))
+        credentials: true, // Allow cookies to be sent
+    }));
+    console.log('CORS configured for development');
 }
-app.all('*', setupAsyncLocalStorage)
 
-app.use('/api/auth', authRoutes)
-app.use('/api/user', userRoutes)
-app.use('/api/review', reviewRoutes)
-app.use('/api/contact', contactRoutes)
+// Static file serving for production
+if (isProduction) {
+    // Serve static files from the "public" directory
+    app.use(express.static(path.resolve('public')));
+
+    // Fallback route for unmatched requests
+    app.use((req, res, next) => {
+        if (req.path.startsWith('/api') || req.path.includes('.')) {
+            // Skip fallback for API and static asset requests
+            return next();
+        }
+        // Serve the Angular app for other routes
+        res.sendFile(path.resolve('public', 'index.html'));
+    });
+}
+
+
+
+// Middleware for async local storage
+app.all('*', setupAsyncLocalStorage);
+
+// API Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/user', userRoutes);
+app.use('/api/review', reviewRoutes);
+app.use('/api/contact', contactRoutes);
+
+// Debugging request logs
 app.use((req, res, next) => {
     console.log(`Request received: ${req.method} ${req.path}`);
     next();
 });
 
+// Socket setup
+setupSocketAPI(server);
 
-setupSocketAPI(server)
+// Fallback route for unmatched routes in development
+if (!isProduction) {
+    app.use((req, res, next) => {
+        if (req.path.includes('.')) {
+            // Skip fallback for static files (e.g., .js, .css)
+            return next();
+        }
+        if (req.path.startsWith('/api')) {
+            // Skip fallback for API requests
+            return next();
+        }
+        res.sendFile(path.resolve('public', 'index.html'));
+    });
+}
 
-// Make every unhandled server-side-route match index.html
-// so when requesting http://localhost:3030/unhandled-route... 
-// it will still serve the index.html file
-// and allow vue/react-router to take it from there
 
-app.get('/**', (req, res) => {
-    res.sendFile(path.resolve('public/index.html'))
-})
-
-import { logger } from './services/logger.service.js'
-const port = process.env.PORT || 3030
-
+// Start the server
 server.listen(port, () => {
-    logger.info('Server is running on port: ' + port)
-})
+    logger.info(`Server is running on port: ${port}`);
+});
