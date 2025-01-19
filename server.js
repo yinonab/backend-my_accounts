@@ -33,7 +33,7 @@ app.use(express.json());
 // CORS Setup
 if (isProduction) {
     app.use(cors({
-        origin: process.env.FRONTEND_URL || 'https://your-production-frontend.com', // Update with your production frontend URL
+        origin: process.env.FRONTEND_URL || 'https://backend-my-accounts.onrender.com', // Update with your production frontend URL
         credentials: true, // Allow cookies to be sent
     }));
     console.log(`CORS configured for production: ${process.env.FRONTEND_URL}`);
