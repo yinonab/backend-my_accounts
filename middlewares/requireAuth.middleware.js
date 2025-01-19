@@ -2,7 +2,7 @@ import { config } from '../config/index.js'
 import { logger } from '../services/logger.service.js'
 import { asyncLocalStorage } from '../services/als.service.js'
 import Cryptr from 'cryptr';
-import { authService } from '../../backend/api/auth/auth.service.js';
+import { authService } from '../api/auth/auth.service.js';
 
 
 const cryptr = new Cryptr(process.env.SECRET || 'Secret-Puk-1234');
