@@ -96,6 +96,21 @@ if (isProduction) {
     console.log('CORS configured for development');
 }
 
+if (isProduction) {
+    // Serve static files from the "public" directory
+    app.use(express.static(path.resolve('public')));
+
+    // Fallback route for unmatched requests
+    app.use((req, res, next) => {
+        if (req.path.startsWith('/api') || req.path.includes('.')) {
+            // Skip fallback for API and static asset requests
+            return next();
+        }
+        // Serve the Angular app for other routes
+        res.sendFile(path.resolve('public', 'index.html'));
+    });
+}
+
 
 // Middleware for async local storage
 app.all('*', setupAsyncLocalStorage);
