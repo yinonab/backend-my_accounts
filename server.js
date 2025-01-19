@@ -31,10 +31,52 @@ app.use(cookieParser());
 app.use(express.json());
 
 // CORS Setup
+// if (isProduction) {
+//     app.use(cors({
+//         origin: process.env.FRONTEND_URL || 'https://backend-my-accounts.onrender.com', // Update with your production frontend URL
+//         credentials: true, // Allow cookies to be sent
+//     }));
+//     console.log(`CORS configured for production: ${process.env.FRONTEND_URL}`);
+// } else {
+//     app.use(cors({
+//         origin: [
+//             'http://127.0.0.1:3000',
+//             'http://localhost:3000',
+//             'http://127.0.0.1:5173',
+//             'http://localhost:5173',
+//             'http://localhost:4200',
+//         ],
+//         credentials: true, // Allow cookies to be sent
+//     }));
+//     console.log('CORS configured for development');
+// }
+
+// // Static file serving for production
+// if (isProduction) {
+//     // Serve static files from the "public" directory
+//     app.use(express.static(path.resolve('public')));
+
+//     // Fallback route for unmatched requests
+//     app.use((req, res, next) => {
+//         if (req.path.startsWith('/api') || req.path.includes('.')) {
+//             // Skip fallback for API and static asset requests
+//             return next();
+//         }
+//         // Serve the Angular app for other routes
+//         res.sendFile(path.resolve('public', 'index.html'));
+//     });
+// }
+// CORS Setup
 if (isProduction) {
     app.use(cors({
-        origin: process.env.FRONTEND_URL || 'https://backend-my-accounts.onrender.com', // Update with your production frontend URL
-        credentials: true, // Allow cookies to be sent
+        origin: [
+            process.env.FRONTEND_URL,
+            'https://backend-my-accounts.onrender.com',
+            'http://localhost:3030'  // Include this if you need local development
+        ],
+        credentials: true,
+        methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+        allowedHeaders: ['Content-Type', 'Authorization']
     }));
     console.log(`CORS configured for production: ${process.env.FRONTEND_URL}`);
 } else {
@@ -45,28 +87,14 @@ if (isProduction) {
             'http://127.0.0.1:5173',
             'http://localhost:5173',
             'http://localhost:4200',
+            'http://localhost:3030'
         ],
-        credentials: true, // Allow cookies to be sent
+        credentials: true,
+        methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+        allowedHeaders: ['Content-Type', 'Authorization']
     }));
     console.log('CORS configured for development');
 }
-
-// Static file serving for production
-if (isProduction) {
-    // Serve static files from the "public" directory
-    app.use(express.static(path.resolve('public')));
-
-    // Fallback route for unmatched requests
-    app.use((req, res, next) => {
-        if (req.path.startsWith('/api') || req.path.includes('.')) {
-            // Skip fallback for API and static asset requests
-            return next();
-        }
-        // Serve the Angular app for other routes
-        res.sendFile(path.resolve('public', 'index.html'));
-    });
-}
-
 
 
 // Middleware for async local storage
