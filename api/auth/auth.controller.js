@@ -24,6 +24,50 @@ export async function login(req, res) {
 	}
 }
 
+export async function facebookLogin(req, res) {
+	try {
+		const { facebookId, name, email, accessToken } = req.body
+		// 1. (Optional) verify accessToken with the FB Graph API if you want.
+
+		// 2. Find if we already have a user with this facebookId or email
+		let user = await userService.getByFacebookId(facebookId)
+		// (You might need to add getByFacebookId to your userService, 
+		//  or do a findOne with { facebookId } or { email })
+
+		// 3. If user doesn’t exist, create it
+		if (!user) {
+			const newUserData = {
+				facebookId,
+				username: name,    // or generate a username
+				email: email || '',// FB may not always return email
+				// password not needed for FB user, but your schema might require something 
+				// so you can store a dummy password or handle differently
+			}
+			user = await userService.addFacebookUser(newUserData)
+		}
+
+		// 4. Create an app login token (like in your other login method)
+		const { loginToken } = await authService.createLoginTokenForUser(user)
+
+		// 5. Set the cookie
+		res.cookie('loginToken', loginToken, {
+			httpOnly: true,
+			sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax',
+			secure: process.env.NODE_ENV === 'production',
+		})
+
+		logger.info(`Facebook login successful for user: ${user.username}`)
+
+		// Return the user object (without sensitive data) 
+		// Just like your normal login
+		// Or return { user, token } if you prefer
+		res.status(200).json(user)
+	} catch (err) {
+		logger.error('Failed to handle Facebook login:', err.message)
+		res.status(401).send({ err: 'Failed to handle Facebook login' })
+	}
+}
+
 export async function signup(req, res) {
 	try {
 		console.log('Signup request body:', req.body);

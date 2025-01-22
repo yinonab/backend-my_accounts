@@ -11,6 +11,8 @@ export const userService = {
     query, // List (of users)
     getByUsername, // Used for Login
     updateUserProfile,
+    getByFacebookId,
+    addFacebookUser
 }
 
 async function query(filterBy = {}) {
@@ -155,4 +157,34 @@ function _buildCriteria(filterBy) {
         criteria.score = { $gte: filterBy.minBalance }
     }
     return criteria
+}
+
+// user.service.js
+async function getByFacebookId(facebookId) {
+    try {
+        const collection = await dbService.getCollection('user')
+        const user = await collection.findOne({ facebookId })
+        return user
+    } catch (err) {
+        logger.error(`Error finding user by facebookId ${facebookId}`, err)
+        throw err
+    }
+}
+
+async function addFacebookUser({ facebookId, username, email }) {
+    try {
+        const userToAdd = {
+            facebookId,
+            username,
+            email,
+            createdAt: Date.now(),
+            isAdmin: false,
+        }
+        const collection = await dbService.getCollection('user')
+        await collection.insertOne(userToAdd)
+        return userToAdd
+    } catch (err) {
+        logger.error('cannot add facebook user', err)
+        throw err
+    }
 }

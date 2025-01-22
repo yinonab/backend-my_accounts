@@ -11,6 +11,7 @@ export const authService = {
 	login,
 	getLoginToken,
 	validateToken,
+	createLoginTokenForUser
 };
 
 async function login(username, password) {
@@ -27,6 +28,13 @@ async function login(username, password) {
 	const loginToken = getLoginToken(user);
 	return { user, loginToken };
 }
+async function createLoginTokenForUser(user) {
+	// basically the same as in signup/login
+	user._id = user._id.toString()
+	const loginToken = getLoginToken(user)
+	return { user, loginToken }
+}
+
 
 async function signup({ username, password, email, imgUrl, isAdmin }) {
 	const saltRounds = 10;
