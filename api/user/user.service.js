@@ -12,7 +12,8 @@ export const userService = {
     getByUsername, // Used for Login
     updateUserProfile,
     getByFacebookId,
-    addFacebookUser
+    addFacebookUser,
+    updateUserImage,
 }
 
 async function query(filterBy = {}) {
@@ -33,6 +34,22 @@ async function query(filterBy = {}) {
         throw err
     }
 }
+
+async function updateUserImage(userId, imageUrl) {
+    try {
+        const collection = await dbService.getCollection('user');
+        const updatedUser = await collection.updateOne(
+            { _id: new ObjectId(userId) }, // שימוש במילת המפתח `new` כאן
+            { $set: { img: imageUrl } }  // עדכון השדה `img`
+        );
+        return updatedUser;
+    } catch (err) {
+        logger.error(`Cannot update user image for user ${userId}`, err);
+        throw err;
+    }
+}
+
+
 
 async function updateUserProfile(req) {
     const loggedinUser = req.loggedinUser;
@@ -102,22 +119,50 @@ async function remove(userId) {
     }
 }
 
+// async function update(user) {
+//     try {
+//         // peek only updatable properties
+//         const userToSave = {
+//             _id: ObjectId.createFromHexString(user._id), // needed for the returnd obj
+//             fullname: user.fullname,
+//             score: user.score,
+//         }
+//         const collection = await dbService.getCollection('user')
+//         await collection.updateOne({ _id: userToSave._id }, { $set: userToSave })
+//         return userToSave
+//     } catch (err) {
+//         logger.error(`cannot update user ${user._id}`, err)
+//         throw err
+//     }
+// }
 async function update(user) {
     try {
-        // peek only updatable properties
-        const userToSave = {
-            _id: ObjectId.createFromHexString(user._id), // needed for the returnd obj
-            fullname: user.fullname,
-            score: user.score,
-        }
-        const collection = await dbService.getCollection('user')
-        await collection.updateOne({ _id: userToSave._id }, { $set: userToSave })
-        return userToSave
+        // יצירת אובייקט עדכון דינמי
+        const userToUpdate = {};
+
+        // בדיקה ועדכון שדות רק אם הם קיימים
+        if (user.username) userToUpdate.username = user.username;
+        if (user.password) userToUpdate.password = user.password;
+        if (user.email) userToUpdate.email = user.email;
+        if (user.img) userToUpdate.img = user.img; // שדה התמונה שלך
+        if (user.isAdmin !== undefined) userToUpdate.isAdmin = user.isAdmin;
+
+        const collection = await dbService.getCollection('user');
+
+        // עדכון במסד הנתונים
+        await collection.updateOne(
+            { _id: ObjectId.createFromHexString(user._id) }, // מזהה המשתמש
+            { $set: userToUpdate } // עדכון השדות הקיימים
+        );
+
+        // החזרת המשתמש המעודכן
+        return { ...user, ...userToUpdate };
     } catch (err) {
-        logger.error(`cannot update user ${user._id}`, err)
-        throw err
+        logger.error(`cannot update user ${user._id}`, err);
+        throw err;
     }
 }
+
 
 async function add(user) {
     try {
@@ -126,7 +171,7 @@ async function add(user) {
             username: user.username,
             password: user.password,
             email: user.email,
-            imgUrl: user.img,
+            img: user.img,
             createdAt: Date.now(),
             isAdmin: user.isAdmin,
             // score: 100,

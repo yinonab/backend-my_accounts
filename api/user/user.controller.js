@@ -1,6 +1,6 @@
-import {userService} from './user.service.js'
-import {logger} from '../../services/logger.service.js'
-import {socketService} from '../../services/socket.service.js'
+import { userService } from './user.service.js'
+import { logger } from '../../services/logger.service.js'
+import { socketService } from '../../services/socket.service.js'
 
 export async function getUser(req, res) {
     try {
@@ -36,13 +36,37 @@ export async function deleteUser(req, res) {
     }
 }
 
+// export async function updateUser(req, res) {
+//     try {
+//         const user = req.body
+//         const savedUser = await userService.update(user)
+//         res.send(savedUser)
+//     } catch (err) {
+//         logger.error('Failed to update user', err)
+//         res.status(400).send({ err: 'Failed to update user' })
+//     }
+// }
 export async function updateUser(req, res) {
     try {
-        const user = req.body
-        const savedUser = await userService.update(user)
-        res.send(savedUser)
+        const user = req.body;
+        const userId = req.params.id;
+
+        // הוספת URL של תמונה אם קיים
+        if (user.img) {
+            const imageUrl = user.img; // Use the img field
+            await userService.updateUserImage(userId, imageUrl);
+        }
+
+        // הוספת מזהה המשתמש לעדכון
+        //user._id = userId;
+
+        // קריאה לעדכון המשתמש
+        const savedUser = await userService.update(user);
+        res.send(savedUser);
     } catch (err) {
-        logger.error('Failed to update user', err)
-        res.status(400).send({ err: 'Failed to update user' })
+        logger.error('Failed to update user', err);
+        res.status(400).send({ err: 'Failed to update user' });
     }
 }
+
+

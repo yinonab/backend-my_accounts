@@ -15,6 +15,8 @@ import { contactRoutes } from './api/contact/contact.routes.js';
 import { setupSocketAPI } from './services/socket.service.js';
 import { setupAsyncLocalStorage } from './middlewares/setupAls.middleware.js';
 import { logger } from './services/logger.service.js';
+import { upload } from './services/cloudinary.service.js';
+
 
 const app = express();
 const server = http.createServer(app);
@@ -150,3 +152,22 @@ if (!isProduction) {
 server.listen(port, () => {
     logger.info(`Server is running on port: ${port}`);
 });
+
+// API להעלאת תמונה
+app.post('/api/upload', upload.single('image'), (req, res) => {
+    try {
+        const file = req.file;
+        if (!file) {
+            return res.status(400).json({ error: 'No file uploaded.' });
+        }
+        res.status(200).json({
+            message: 'Image uploaded successfully!',
+            imageUrl: file.path || file.secure_url, // ה-URL הציבורי של התמונה
+        });
+    } catch (error) {
+        console.error('Error uploading image:', error);
+        res.status(500).json({ error: 'Image upload failed', details: error.message });
+    }
+});
+
+
