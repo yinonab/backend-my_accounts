@@ -123,6 +123,7 @@ async function remove(contactId) {
 async function add(contact) {
 	try {
 		console.log('Contact to insert into MongoDB:', contact); // Log the incoming contact
+		contact.img = contact.img || '';
 		const collection = await dbService.getCollection('contact');
 		const result = await collection.insertOne(contact);
 		console.log('MongoDB insert result:', result); // Log the insertion result
@@ -150,30 +151,33 @@ async function add(contact) {
 // 	}
 // }
 
-async function update(contact) {
+async function update(contactId, updateFields) {
 	try {
-		// Convert `_id` to an ObjectId
-		const criteria = { _id: ObjectId.createFromHexString(contact._id) };
+		if (!contactId) throw new Error('Contact ID is required');
+		if (!updateFields || typeof updateFields !== 'object') {
+			throw new Error('Update fields must be an object');
+		}
 
-		// Remove `_id` from the contact object since MongoDB doesn't allow updating the `_id` field
-		const { _id, ...contactToSave } = contact;
+		// הסרת השדה `_id` משדות העדכון
+		const { _id, ...contactToSave } = updateFields;
 
+		const criteria = { _id: ObjectId.createFromHexString(contactId) };
 		const collection = await dbService.getCollection('contact');
 
-		// Update the document with the provided fields
+		// עדכון המסמך מבלי לשנות את השדה `_id`
 		const result = await collection.updateOne(criteria, { $set: contactToSave });
 
 		if (result.matchedCount === 0) {
-			throw new Error(`Contact with ID ${contact._id} not found`);
+			throw new Error(`Contact with ID ${contactId} not found`);
 		}
 
-		logger.info(`Contact ${contact._id} updated successfully`);
-		return contact; // Return the updated contact object
+		return { _id: contactId, ...contactToSave }; // החזרת הנתונים המעודכנים
 	} catch (err) {
-		logger.error(`Failed to update contact ${contact._id}`, err);
+		logger.error(`Failed to update contact ${contactId}`, err);
 		throw err;
 	}
 }
+
 
 async function addContactMsg(contactId, msg) {
 	try {
