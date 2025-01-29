@@ -69,4 +69,25 @@ export async function updateUser(req, res) {
     }
 }
 
+// export async function updateUser(req, res) {
+//     try {
+//         const user = req.body;
+//         const userId = req.params.id;
+
+//         // אם התמונה קיימת, נעדכן רק את התמונה תחילה
+//         if (user.img) {
+//             const updatedUser = await userService.updateUserImage(userId, user.img);
+//             res.send(updatedUser);
+//             return;
+//         }
+
+//         // קריאה לעדכון המשתמש
+//         const savedUser = await userService.update(user);
+//         res.send(savedUser);
+//     } catch (err) {
+//         logger.error('Failed to update user', err);
+//         res.status(400).send({ err: 'Failed to update user' });
+//     }
+// }
+
 

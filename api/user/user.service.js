@@ -48,7 +48,24 @@ async function updateUserImage(userId, imageUrl) {
         throw err;
     }
 }
+// async function updateUserImage(userId, imageUrl) {
+//     try {
+//         const collection = await dbService.getCollection('user');
 
+//         await collection.updateOne(
+//             { _id: new ObjectId(userId) },
+//             { $set: { img: imageUrl } }
+//         );
+
+//         // החזרת המשתמש המעודכן
+//         const updatedUser = await collection.findOne({ _id: new ObjectId(userId) });
+//         delete updatedUser.password;
+//         return updatedUser;
+//     } catch (err) {
+//         logger.error(`Cannot update user image for user ${userId}`, err);
+//         throw err;
+//     }
+// }
 
 
 async function updateUserProfile(req) {
@@ -142,7 +159,7 @@ async function update(user) {
 
         // בדיקה ועדכון שדות רק אם הם קיימים
         if (user.username) userToUpdate.username = user.username;
-        if (user.password) userToUpdate.password = user.password;
+        //if (user.password) userToUpdate.password = user.password;
         if (user.email) userToUpdate.email = user.email;
         if (user.img) userToUpdate.img = user.img; // שדה התמונה שלך
         if (user.isAdmin !== undefined) userToUpdate.isAdmin = user.isAdmin;
@@ -162,6 +179,30 @@ async function update(user) {
         throw err;
     }
 }
+
+// async function update(user) {
+//     try {
+//         const userToUpdate = {};
+//         if (user.username) userToUpdate.username = user.username;
+//         if (user.email) userToUpdate.email = user.email;
+//         if (user.img) userToUpdate.img = user.img;
+//         if (user.isAdmin !== undefined) userToUpdate.isAdmin = user.isAdmin;
+
+//         const collection = await dbService.getCollection('user');
+
+//         await collection.updateOne(
+//             { _id: new ObjectId(user._id) },
+//             { $set: userToUpdate }
+//         );
+
+//         const updatedUser = await collection.findOne({ _id: new ObjectId(user._id) });
+//         delete updatedUser.password;
+//         return updatedUser;
+//     } catch (err) {
+//         logger.error(`cannot update user ${user._id}`, err);
+//         throw err;
+//     }
+// }
 
 
 async function add(user) {
@@ -190,16 +231,9 @@ function _buildCriteria(filterBy) {
     if (filterBy.txt) {
         const txtCriteria = { $regex: filterBy.txt, $options: 'i' }
         criteria.$or = [
-            {
-                username: txtCriteria,
-            },
-            {
-                fullname: txtCriteria,
-            },
-        ]
-    }
-    if (filterBy.minBalance) {
-        criteria.score = { $gte: filterBy.minBalance }
+            { username: txtCriteria },
+            { email: txtCriteria }
+        ];
     }
     return criteria
 }
