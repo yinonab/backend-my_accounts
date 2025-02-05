@@ -1,5 +1,5 @@
-import {logger} from './logger.service.js'
-import {Server} from 'socket.io'
+import { logger } from './logger.service.js'
+import { Server } from 'socket.io'
 
 var gIo = null
 
@@ -24,20 +24,74 @@ export function setupSocketAPI(http) {
             socket.myTopic = topic
         })
         socket.on('chat-send-msg', msg => {
-            logger.info(`New chat msg from socket [id: ${socket.id}], emitting to topic ${socket.myTopic}`)
-            // emits to all sockets:
-            // gIo.emit('chat addMsg', msg)
-            // emits only to sockets in the same room
-            gIo.to(socket.myTopic).emit('chat-add-msg', msg)
-        })
+            if (!socket.userId) {
+                logger.warn(`Unauthorized message attempt from socket [id: ${socket.id}]`);
+                return;
+            }
+
+            const message = {
+                sender: socket.userId, // שימוש ב-userId של הסוקט
+                text: msg.text
+            };
+
+            logger.info(`New chat msg from user [id: ${socket.userId}], emitting to topic ${socket.myTopic}`);
+            gIo.to(socket.myTopic).emit('chat-add-msg', message);
+        });
+
+        // ✅ האזנה להודעות פרטיות
+        socket.on('chat-send-private-msg', (data) => {
+            const { toUserId, text } = data;
+
+            if (!socket.userId) {
+                logger.warn(`❌ Unauthorized private message attempt from socket [id: ${socket.id}]`);
+                return;
+            }
+
+            if (!toUserId || !text) {
+                logger.warn(`⚠️ Missing recipient or message text: { toUserId: ${toUserId}, text: ${text} }`);
+                return;
+            }
+
+            logger.info(`📩 Private message received: { from: ${socket.userId}, to: ${toUserId}, text: ${text} }`);
+
+            const privateMessage = {
+                sender: socket.userId,
+                text: text
+            };
+
+            const targetSocket = _getUserSocket(toUserId);
+            if (targetSocket) {
+                targetSocket.emit('chat-add-private-msg', privateMessage);
+                logger.info(`✅ Private message successfully sent to ${toUserId}`);
+            } else {
+                logger.warn(`⚠️ No active socket found for recipient ${toUserId}`);
+            }
+        });
+
+
+
         socket.on('user-watch', userId => {
             logger.info(`user-watch from socket [id: ${socket.id}], on user ${userId}`)
             socket.join('watching:' + userId)
         })
+        //Auth
         socket.on('set-user-socket', userId => {
-            logger.info(`Setting socket.userId = ${userId} for socket [id: ${socket.id}]`)
-            socket.userId = userId
-        })
+            if (!userId) {
+                logger.warn(`⚠️ Invalid userId received for socket authentication.`);
+                return;
+            }
+            logger.info(`✅ Setting socket.userId = ${userId} for socket [id: ${socket.id}]`);
+            socket.userId = userId;
+        });
+        socket.on('connect', () => {
+            if (socket.userId) {
+                logger.info(`🔄 Re-authenticating socket with userId: ${socket.userId}`);
+            } else {
+                logger.warn(`⚠️ New socket connection without authentication. User must log in.`);
+            }
+        });
+
+
         socket.on('unset-user-socket', () => {
             logger.info(`Removing socket.userId for socket [id: ${socket.id}]`)
             delete socket.userId
@@ -45,6 +99,7 @@ export function setupSocketAPI(http) {
 
     })
 }
+
 
 function emitTo({ type, data, label }) {
     if (label) gIo.to('watching:' + label.toString()).emit(type, data)
@@ -58,7 +113,7 @@ async function emitToUser({ type, data, userId }) {
     if (socket) {
         logger.info(`Emiting event: ${type} to user: ${userId} socket [id: ${socket.id}]`)
         socket.emit(type, data)
-    }else {
+    } else {
         logger.info(`No active socket for user: ${userId}`)
         // _printSockets()
     }
@@ -68,7 +123,7 @@ async function emitToUser({ type, data, userId }) {
 // Optionally, broadcast to a room / to all
 async function broadcast({ type, data, room = null, userId }) {
     userId = userId.toString()
-    
+
     logger.info(`Broadcasting event: ${type}`)
     const excludedSocket = await _getUserSocket(userId)
     if (room && excludedSocket) {
@@ -86,10 +141,13 @@ async function broadcast({ type, data, room = null, userId }) {
     }
 }
 
-async function _getUserSocket(userId) {
-    const sockets = await _getAllSockets()
-    const socket = sockets.find(s => s.userId === userId)
-    return socket
+// async function _getUserSocket(userId) {
+//     const sockets = await _getAllSockets()
+//     const socket = sockets.find(s => s.userId === userId)
+//     return socket
+// }
+function _getUserSocket(userId) {
+    return [...gIo.sockets.sockets.values()].find(socket => socket.userId === userId);
 }
 async function _getAllSockets() {
     // return all Socket instances
@@ -110,9 +168,9 @@ export const socketService = {
     // set up the sockets service and define the API
     setupSocketAPI,
     // emit to everyone / everyone in a specific room (label)
-    emitTo, 
+    emitTo,
     // emit to a specific user (if currently active in system)
-    emitToUser, 
+    emitToUser,
     // Send to all sockets BUT not the current socket - if found
     // (otherwise broadcast to a room / to all)
     broadcast,
