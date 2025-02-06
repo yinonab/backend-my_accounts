@@ -89,7 +89,9 @@ if (isProduction) {
             'http://127.0.0.1:5173',
             'http://localhost:5173',
             'http://localhost:4200',
-            'http://localhost:3030'
+            'http://localhost:3030',
+            'http://192.168.1.63:4200',  // הוספת כתובת ה-IP של המחשב שלך
+            'http://10.0.2.2:4200'
         ],
         credentials: true,
         methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
