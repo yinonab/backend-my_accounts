@@ -29,20 +29,22 @@ export function setupSocketAPI(http) {
                 return;
             }
 
+            // Add username to the message object
             const message = {
-                sender: socket.userId, // שימוש ב-userId של הסוקט
+                sender: socket.userId,
+                senderName: socket.username, // Add username
                 text: msg.text
             };
 
-            logger.info(`New chat msg from user [id: ${socket.userId}], emitting to topic ${socket.myTopic}`);
+            logger.info(`New chat msg from user [id: ${socket.userId}, name: ${socket.username}], emitting to topic ${socket.myTopic}`);
             gIo.to(socket.myTopic).emit('chat-add-msg', message);
         });
 
         // ✅ האזנה להודעות פרטיות
-        socket.on('chat-send-private-msg', (data) => {
+        socket.on('chat-send-private-msg', async (data) => {
             const { toUserId, text } = data;
 
-            if (!socket.userId) {
+            if (!socket.userId || !socket.username) {
                 logger.warn(`❌ Unauthorized private message attempt from socket [id: ${socket.id}]`);
                 return;
             }
@@ -52,12 +54,14 @@ export function setupSocketAPI(http) {
                 return;
             }
 
-            logger.info(`📩 Private message received: { from: ${socket.userId}, to: ${toUserId}, text: ${text} }`);
-
+            // יצירת אובייקט ההודעה עם שם השולח
             const privateMessage = {
                 sender: socket.userId,
+                senderName: socket.username, // הוספת שם המשתמש
                 text: text
             };
+
+            logger.info(`📩 Private message received: { from: ${socket.userId}, to: ${toUserId}, text: ${text} }`);
 
             const targetSocket = _getUserSocket(toUserId);
             if (targetSocket) {
@@ -75,13 +79,15 @@ export function setupSocketAPI(http) {
             socket.join('watching:' + userId)
         })
         //Auth
-        socket.on('set-user-socket', userId => {
+        socket.on('set-user-socket', (userData) => {
+            const { userId, username } = userData;
             if (!userId) {
                 logger.warn(`⚠️ Invalid userId received for socket authentication.`);
                 return;
             }
-            logger.info(`✅ Setting socket.userId = ${userId} for socket [id: ${socket.id}]`);
+            logger.info(`✅ Setting socket.userId = ${userId} and socket.username = ${username} for socket [id: ${socket.id}]`);
             socket.userId = userId;
+            socket.username = username;
         });
         socket.on('connect', () => {
             if (socket.userId) {
