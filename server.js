@@ -91,7 +91,8 @@ if (isProduction) {
             'http://localhost:4200',
             'http://localhost:3030',
             'http://192.168.1.63:4200',  // הוספת כתובת ה-IP של המחשב שלך
-            'http://10.0.2.2:4200'
+            'http://10.0.2.2:4200',      // סימולטור אנדרואיד
+            'http://10.100.102.9:4200'   // IP חדש שלך
         ],
         credentials: true,
         methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
