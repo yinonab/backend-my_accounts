@@ -7,10 +7,20 @@ export function setupSocketAPI(http) {
     gIo = new Server(http, {
         cors: {
             origin: '*',
-        }
-    })
+            methods: ['GET', 'POST'],
+            credentials: true,
+            transports: ['websocket', 'polling']
+        },
+        allowEIO3: true,
+        pingTimeout: 60000
+    });
     gIo.on('connection', socket => {
         logger.info(`New connected socket [id: ${socket.id}]`)
+        logger.info(`New connected socket [id: ${socket.id}]`, {
+            userAgent: socket.handshake.headers['user-agent'],
+            transport: socket.conn.transport.name,
+            ip: socket.handshake.address
+        });
         socket.on('disconnect', socket => {
             logger.info(`Socket disconnected [id: ${socket.id}]`)
         })
