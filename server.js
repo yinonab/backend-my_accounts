@@ -133,7 +133,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/review', reviewRoutes);
 app.use('/api/contact', contactRoutes);
-app.use('/api/notifications', notificationRoutes);
+app.use('/api/notification', notificationRoutes);
 
 
 // Debugging request logs

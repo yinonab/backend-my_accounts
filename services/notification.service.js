@@ -5,7 +5,11 @@ import { dbService } from './db.service.js';
 import { logger } from './logger.service.js';
 import dotenv from 'dotenv';
 dotenv.config(); // וודא שזה נטען
-
+console.log('Config loaded:', {
+    vapidPublicKey: config.notifications.vapidPublicKey,
+    vapidPrivateKey: config.notifications.vapidPrivateKey?.substring(0, 5) + '...', // לא להדפיס את כל המפתח הפרטי
+    vapidContact: config.notifications.vapidContact
+});
 console.log('Loaded VAPID Public Key:', config.notifications.vapidPublicKey);
 
 const COLLECTION_NAME = 'notifications';
@@ -34,6 +38,10 @@ async function createIndexes() {
 
 async function saveSubscription(subscription, userId) {
     try {
+        console.log('Attempting to save subscription:', {
+            userId,
+            subscription: JSON.stringify(subscription).substring(0, 100) + '...'
+        });
         const collection = await dbService.getCollection(COLLECTION_NAME);
 
         // בדיקה אם כבר קיים subscription לאותו משתמש

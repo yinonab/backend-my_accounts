@@ -12,6 +12,11 @@ router.post('/', log, requireAuth, async (req, res) => {
         const { subscription } = req.body;
         const userId = req.loggedinUser._id;
 
+        console.log('Received request to save subscription:', {
+            userId,
+            subscription: JSON.stringify(subscription).substring(0, 100) + '...'
+        });
+
         await notificationService.saveSubscription(subscription, userId);
         res.status(201).json({ message: 'Subscription added successfully' });
     } catch (err) {
