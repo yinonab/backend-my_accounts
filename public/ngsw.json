@@ -1,6 +1,6 @@
 {
   "configVersion": 1,
-  "timestamp": 1739105583031,
+  "timestamp": 1739122586992,
   "index": "/index.html",
   "assetGroups": [
     {
@@ -13,7 +13,7 @@
       "urls": [
         "/favicon.ico",
         "/index.html",
-        "/main-BYYKOTTH.js",
+        "/main-2DF2U7YI.js",
         "/manifest.webmanifest",
         "/polyfills-FFHMD2TL.js",
         "/styles-YSWAHAIC.css"
@@ -140,8 +140,8 @@
     "/assets/images/teamwork.png": "c5f72e296b566e7aba2d433f2861fb3a5f74b54a",
     "/assets/images/users.png": "2abfa4c086a43de978616aeffcc77b8063cc08af",
     "/favicon.ico": "9c39f434fe1261f68c5e3eefdf734630d99c5670",
-    "/index.html": "af4c3e1283e9d675fbfa706b932027988fc65604",
-    "/main-BYYKOTTH.js": "128c2516d728a174c8b53367ab08019350ef5adf",
+    "/index.html": "e0e4d10a2251548fdc3bf85fb326998dc85a6b6e",
+    "/main-2DF2U7YI.js": "25bd8185c8c774276979d22dc3a1fdf9d4c6e693",
     "/manifest.webmanifest": "580ea5fe081869522a8ebb0d8184f6f82dccdd1d",
     "/polyfills-FFHMD2TL.js": "f49b49a155bc7d192db62a4c15d0a612b460a667",
     "/styles-YSWAHAIC.css": "eb4ac7e8c0e6b5b083fd0aeb3de5c382b3691659"

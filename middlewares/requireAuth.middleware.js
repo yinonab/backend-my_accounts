@@ -10,20 +10,35 @@ const cryptr = new Cryptr(process.env.SECRET || 'Secret-Puk-1234');
 
 export async function requireAuth(req, res, next) {
 	try {
-		console.log('Cookies received:', req.cookies); // Debug log
+		console.log('Headers:', req.headers); // Debug log
+		console.log('Cookies:', req.cookies); // Debug log
 
-		const { loginToken } = req.cookies;
+		// בדוק קוקיז קודם
+		let loginToken = req.cookies.loginToken;
+
+		// אם אין קוקיז, בדוק Authorization header
 		if (!loginToken) {
-			console.error('Missing loginToken in cookies');
+			const authHeader = req.headers.authorization;
+			if (authHeader) {
+				// חלץ את הטוקן מהheader (מסיר את המילה 'Bearer')
+				loginToken = authHeader.split(' ')[1];
+			}
+		}
+
+		// בדוק אם טוקן קיים
+		if (!loginToken) {
+			console.error('Missing loginToken');
 			return res.status(401).send({ err: 'Not authenticated' });
 		}
 
+		// וודא תקינות הטוקן
 		const loggedinUser = authService.validateToken(loginToken);
 		if (!loggedinUser) {
 			console.error('Invalid or expired loginToken');
 			return res.status(401).send({ err: 'Invalid token' });
 		}
 
+		// הוסף משתמש מחובר לrequest
 		req.loggedinUser = loggedinUser;
 		next();
 	} catch (err) {

@@ -12,9 +12,17 @@ router.post('/', log, requireAuth, async (req, res) => {
         const { subscription } = req.body;
         const userId = req.loggedinUser._id;
 
+        // בדיקת תקינות subscription
+        if (!subscription) {
+            return res.status(400).json({ error: 'Subscription is required' });
+        }
+
+        // לוג בטוח יותר
         console.log('Received request to save subscription:', {
             userId,
-            subscription: JSON.stringify(subscription).substring(0, 100) + '...'
+            subscriptionDetails: subscription ?
+                JSON.stringify(Object.keys(subscription)) :
+                'No subscription provided'
         });
 
         await notificationService.saveSubscription(subscription, userId);
