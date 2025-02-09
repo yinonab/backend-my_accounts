@@ -76,7 +76,10 @@ async function saveSubscription(subscription, userId) {
 }
 
 async function sendNotification(userId, payload) {
-    console.log('Is message relevant?');
+    console.log('Attempting to send notification:', {
+        userId,
+        payload
+    });
     try {
         const collection = await dbService.getCollection(COLLECTION_NAME);
         const userSubscription = await collection.findOne({ userId });
