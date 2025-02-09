@@ -1,0 +1,154 @@
+{
+  "configVersion": 1,
+  "timestamp": 1739083977505,
+  "index": "/index.html",
+  "assetGroups": [
+    {
+      "name": "app",
+      "installMode": "prefetch",
+      "updateMode": "prefetch",
+      "cacheQueryOptions": {
+        "ignoreVary": true
+      },
+      "urls": [
+        "/favicon.ico",
+        "/index.html",
+        "/main-5JO5AGXL.js",
+        "/manifest.webmanifest",
+        "/polyfills-FFHMD2TL.js",
+        "/styles-YSWAHAIC.css"
+      ],
+      "patterns": []
+    },
+    {
+      "name": "assets",
+      "installMode": "lazy",
+      "updateMode": "prefetch",
+      "cacheQueryOptions": {
+        "ignoreVary": true
+      },
+      "urls": [
+        "/assets/icons/icon-128x128.png",
+        "/assets/icons/icon-144x144.png",
+        "/assets/icons/icon-152x152.png",
+        "/assets/icons/icon-192x192.png",
+        "/assets/icons/icon-384x384.png",
+        "/assets/icons/icon-512x512.png",
+        "/assets/icons/icon-72x72.png",
+        "/assets/icons/icon-96x96.png",
+        "/assets/images/about.svg",
+        "/assets/images/acc.png",
+        "/assets/images/acc1.png",
+        "/assets/images/acc2.png",
+        "/assets/images/account.png",
+        "/assets/images/add-contact.png",
+        "/assets/images/arrow-down.png",
+        "/assets/images/arrow-down1.png",
+        "/assets/images/arrow-up.png",
+        "/assets/images/back.png",
+        "/assets/images/bitcoin.png",
+        "/assets/images/chat.png",
+        "/assets/images/coins.png",
+        "/assets/images/contact.png",
+        "/assets/images/delete.png",
+        "/assets/images/delete1.png",
+        "/assets/images/edit.png",
+        "/assets/images/edit2.png",
+        "/assets/images/fb.png",
+        "/assets/images/fb2.png",
+        "/assets/images/global-security.png",
+        "/assets/images/home.png",
+        "/assets/images/increase.png",
+        "/assets/images/instagram.png",
+        "/assets/images/keith-misner-h0Vxgz5tyXA-unsplash.jpg",
+        "/assets/images/logo.png",
+        "/assets/images/plus.png",
+        "/assets/images/speak.png",
+        "/assets/images/teamwork.png",
+        "/assets/images/users.png"
+      ],
+      "patterns": []
+    }
+  ],
+  "dataGroups": [
+    {
+      "name": "api-cache",
+      "patterns": [
+        "\\/api\\/.*"
+      ],
+      "strategy": "freshness",
+      "maxSize": 100,
+      "maxAge": 259200000,
+      "timeoutMs": 10000,
+      "cacheQueryOptions": {
+        "ignoreVary": true
+      },
+      "version": 1
+    }
+  ],
+  "hashTable": {
+    "/assets/icons/icon-128x128.png": "f912963bdc6d5a38d8f1dd0afbaab2ce8d657acb",
+    "/assets/icons/icon-144x144.png": "b155fd5f2fd5d2ea7760721063003c4cd95fd783",
+    "/assets/icons/icon-152x152.png": "eae6e0f0c8afb8aaae339e2a569b43e9238e5e6c",
+    "/assets/icons/icon-192x192.png": "15c4180454633880d98674aa7394656196c91584",
+    "/assets/icons/icon-384x384.png": "94a915751ef6c9282df9aea405ad679230631814",
+    "/assets/icons/icon-512x512.png": "1de182f76f7329dfa8f9fcdd1fdcdd695bea6a99",
+    "/assets/icons/icon-72x72.png": "aa88a6096bd973be7f6d7a5489bfa6bc2463f8c4",
+    "/assets/icons/icon-96x96.png": "7fb8f59c30ce2ff12c700321a0b39e14b3dc8f95",
+    "/assets/images/about.svg": "5305c666e27d5aadc3089e5729f9b0a8e96a6580",
+    "/assets/images/acc.png": "20a18233e4be861a64024dc80db48775ad96b7dd",
+    "/assets/images/acc1.png": "70969952a4c5bb88c234f66cd4cf84b9f6ae0872",
+    "/assets/images/acc2.png": "12bb6d8d3275b57cb9304f42b6f1646f4534fe0c",
+    "/assets/images/account.png": "ad2848a340a525e9020b4a9f225a44db1798af54",
+    "/assets/images/add-contact.png": "6d7699bbf891b2950893edf0c79cd6f93e77ff91",
+    "/assets/images/arrow-down.png": "e94d04d13ec04de226cb33dd70bc3336723ba2e2",
+    "/assets/images/arrow-down1.png": "187da77cc67d15c276a6c04e83501d525b0f587b",
+    "/assets/images/arrow-up.png": "cd0fd49ac6001877e968fc2ecd52aa9773b58102",
+    "/assets/images/back.png": "593365f6052d4fd2962a522a1e9e261a03f69f80",
+    "/assets/images/bitcoin.png": "eb934ca7e5476aedcf9114639a8c453ea0fd2f9f",
+    "/assets/images/chat.png": "1d2930c17b923332ec2439db992a81161391b031",
+    "/assets/images/coins.png": "1edd2a1072f1ca9ebd9bcfbe9433a89b7921492b",
+    "/assets/images/contact.png": "b8a1bc9750432ee08f94760a5739f97d08c4e33a",
+    "/assets/images/delete.png": "c02286a33585eee171e1da21cd6cd369667dca92",
+    "/assets/images/delete1.png": "6150236ddb0f320898eea6c4303732aa0fce829f",
+    "/assets/images/edit.png": "d8be2389e1f530d2e20f9ce43f7cf1e774ebf077",
+    "/assets/images/edit2.png": "a695c8fe4a020666b08da5ce8908e81c41e13028",
+    "/assets/images/fb.png": "903f13311b403b9a43f054edb9345df474445293",
+    "/assets/images/fb2.png": "d1907d29800cde047dd0d0338bf35d3c00dce640",
+    "/assets/images/global-security.png": "dac200125f9a621a9bd8ee86e55bbf2282c2ce5e",
+    "/assets/images/home.png": "5bc019495568b7fe703d4736f43f608afed34484",
+    "/assets/images/increase.png": "c9c0dce48ac982d934c7ec40e418ba9f068c1373",
+    "/assets/images/instagram.png": "76924e106c6a44bc6425da8eff90fbf9a1ce9674",
+    "/assets/images/keith-misner-h0Vxgz5tyXA-unsplash.jpg": "0784414d8103f4ba370c5e9155f17cd29f58702a",
+    "/assets/images/logo.png": "f2e3c72421dba14abc3d3e5f47527a8871845a85",
+    "/assets/images/plus.png": "1142932a8b622c94aa994a57bc5714cf6fbeeafb",
+    "/assets/images/speak.png": "a11cac198910ba75ea42b3d1cfc4718e9fcdacd8",
+    "/assets/images/teamwork.png": "c5f72e296b566e7aba2d433f2861fb3a5f74b54a",
+    "/assets/images/users.png": "2abfa4c086a43de978616aeffcc77b8063cc08af",
+    "/favicon.ico": "9c39f434fe1261f68c5e3eefdf734630d99c5670",
+    "/index.html": "a17e4a2b855e34d482298d499e8504d1a3a0f98c",
+    "/main-5JO5AGXL.js": "12586739a7b731d5d6f4e6f02d5ce43def5b80bb",
+    "/manifest.webmanifest": "580ea5fe081869522a8ebb0d8184f6f82dccdd1d",
+    "/polyfills-FFHMD2TL.js": "f49b49a155bc7d192db62a4c15d0a612b460a667",
+    "/styles-YSWAHAIC.css": "eb4ac7e8c0e6b5b083fd0aeb3de5c382b3691659"
+  },
+  "navigationUrls": [
+    {
+      "positive": true,
+      "regex": "^\\/.*$"
+    },
+    {
+      "positive": false,
+      "regex": "^\\/(?:.+\\/)?[^/]*\\.[^/]*$"
+    },
+    {
+      "positive": false,
+      "regex": "^\\/(?:.+\\/)?[^/]*__[^/]*$"
+    },
+    {
+      "positive": false,
+      "regex": "^\\/(?:.+\\/)?[^/]*__[^/]*\\/.*$"
+    }
+  ],
+  "navigationRequestStrategy": "performance"
+}

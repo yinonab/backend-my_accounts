@@ -4,14 +4,19 @@ import cors from 'cors';
 import express from 'express';
 import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
-
-// Load environment variables
 dotenv.config();
+
+console.log('Loaded environment variables:');
+console.log('VAPID_PUBLIC_KEY:', process.env.VAPID_PUBLIC_KEY);
+console.log('VAPID_PRIVATE_KEY:', process.env.VAPID_PRIVATE_KEY);
+console.log('VAPID_CONTACT:', process.env.VAPID_CONTACT);
 
 import { authRoutes } from './api/auth/auth.routes.js';
 import { userRoutes } from './api/user/user.routes.js';
 import { reviewRoutes } from './api/review/review.routes.js';
 import { contactRoutes } from './api/contact/contact.routes.js';
+import { notificationRoutes } from './api/notification/notification.routes.js';
+
 import { setupSocketAPI } from './services/socket.service.js';
 import { setupAsyncLocalStorage } from './middlewares/setupAls.middleware.js';
 import { logger } from './services/logger.service.js';
@@ -92,7 +97,8 @@ if (isProduction) {
             'http://localhost:3030',
             'http://192.168.1.63:4200',  // הוספת כתובת ה-IP של המחשב שלך
             'http://10.0.2.2:4200',      // סימולטור אנדרואיד
-            'http://10.100.102.9:4200'   // IP חדש שלך
+            'http://10.100.102.9:4200',
+            'http://192.168.1.88:4200'  // IP חדש שלך
         ],
         credentials: true,
         methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -125,6 +131,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/review', reviewRoutes);
 app.use('/api/contact', contactRoutes);
+app.use('/api/notification', notificationRoutes);
 
 // Debugging request logs
 app.use((req, res, next) => {
