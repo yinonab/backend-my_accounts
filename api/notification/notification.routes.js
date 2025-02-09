@@ -34,9 +34,22 @@ router.post('/', log, requireAuth, async (req, res) => {
 });
 
 // שליחת נוטיפיקציה (לטסטים)
+// router.post('/send', log, requireAuth, async (req, res) => {
+//     try {
+//         const { userId, payload } = req.body;
+//         await notificationService.sendNotification(userId, payload);
+//         res.json({ message: 'Notification sent successfully' });
+//     } catch (err) {
+//         console.error('Error sending notification:', err);
+//         res.status(500).json({ error: 'Failed to send notification' });
+//     }
+// });
 router.post('/send', log, requireAuth, async (req, res) => {
     try {
-        const { userId, payload } = req.body;
+        const userId = req.loggedinUser._id; // ✅ ה-ID מגיע ישירות מהטוקן
+        console.log('Extracted userId from token:', req.loggedinUser._id);
+        const { payload } = req.body; // ✅ מקבל רק את ה-payload מהלקוח
+
         await notificationService.sendNotification(userId, payload);
         res.json({ message: 'Notification sent successfully' });
     } catch (err) {
