@@ -4,6 +4,8 @@ import cors from 'cors';
 import express from 'express';
 import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
+import { config } from './config/index.js'; // ודא שהנתיב נכון!
+
 dotenv.config();
 
 console.log('Loaded environment variables:');
@@ -131,7 +133,8 @@ app.use('/api/auth', authRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/review', reviewRoutes);
 app.use('/api/contact', contactRoutes);
-app.use('/api/notification', notificationRoutes);
+app.use('/api/notifications', notificationRoutes);
+
 
 // Debugging request logs
 app.use((req, res, next) => {
@@ -159,9 +162,9 @@ if (!isProduction) {
 
 
 // Start the server
-server.listen(port, () => {
-    logger.info(`Server is running on port: ${port}`);
-});
+// server.listen(port, () => {
+//     logger.info(`Server is running on port: ${port}`);
+// });
 
 // API להעלאת תמונה
 app.post('/api/upload', upload.single('image'), (req, res) => {
@@ -179,5 +182,15 @@ app.post('/api/upload', upload.single('image'), (req, res) => {
         res.status(500).json({ error: 'Image upload failed', details: error.message });
     }
 });
+// Start the server
+server.listen(port, () => {
+    console.log(`🌍 Full Config:`, config);
+    console.log(`🌍 API Base URL: ${config.baseURL || '❌ Missing baseURL in config'}`);
+
+    logger.info(`🚀 Server is running on port: ${port}`);
+    console.log(`🚀 Server is running on port: ${port}`);
+    console.log(`🌍 API Base URL: ${isProduction ? 'Production' : 'Development'} - ${config.baseURL}`);
+});
+
 
 
