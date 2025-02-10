@@ -78,6 +78,10 @@ async function saveSubscription(subscription, userId) {
 
         // בדיקה אם כבר קיים subscription לאותו משתמש
         const existingSubscription = await collection.findOne({ userId });
+        if (existingSubscription && existingSubscription.subscription.endpoint === subscription.endpoint) {
+            console.log(`✅ Subscription for user: ${userId} is already up to date.`);
+            return; // 🔹 אם אין שינוי – לא לעדכן
+        }
 
         if (existingSubscription) {
             console.log(`🔄 Updating existing subscription for user: ${userId}`);
@@ -139,13 +143,15 @@ async function sendNotification(userId, payload) {
             logger.warn(`No subscription found for user: ${userId}`);
             return;
         }
+        const subscription = userSubscription.subscription;
         console.log('🚀 Preparing to send web push notification');
         console.log('🚀 Sending web push notification to:', userSubscription.subscription.endpoint);
         console.log('📨 Payload being sent:', JSON.stringify(payload, null, 2));
 
+
         try {
             const pushResult = await webpush.sendNotification(
-                userSubscription.subscription,
+                subscription,
                 JSON.stringify(payload)
             );
             console.log('✅ Notification sent successfully:', pushResult);

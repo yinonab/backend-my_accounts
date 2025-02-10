@@ -4,8 +4,10 @@ import { requireAuth } from '../../middlewares/requireAuth.middleware.js';
 import { log } from '../../middlewares/logger.middleware.js';
 import { notificationService } from '../../services/notification.service.js';
 import { config } from '../../config/index.js';
+import { dbService } from '../../services/db.service.js';
 
 
+const COLLECTION_NAME = 'notifications';
 const router = express.Router();
 
 // נרשם לנוטיפיקציות
@@ -46,6 +48,28 @@ router.get('/vapid-public-key', async (req, res) => {
         res.status(500).json({ error: 'Failed to retrieve VAPID public key' });
     }
 });
+router.get('/get-subscription', requireAuth, async (req, res) => {
+    try {
+        const userId = req.loggedinUser._id;
+        console.log("🔍 Checking subscription for user:", userId);
+
+        const collection = await dbService.getCollection(COLLECTION_NAME);
+        const userSubscription = await collection.findOne({ userId });
+
+        if (!userSubscription) {
+            console.warn(`⚠️ No subscription found for user: ${userId}`);
+            return res.status(404).json({ error: 'No subscription found' });
+        }
+
+        console.log("✅ Found subscription:", userSubscription);
+        res.status(200).json({ subscription: userSubscription.subscription });
+    } catch (err) {
+        console.error('❌ Error retrieving subscription:', err);
+        res.status(500).json({ error: 'Failed to retrieve subscription' });
+    }
+});
+
+
 
 // שליחת נוטיפיקציה (לטסטים)
 // router.post('/send', log, requireAuth, async (req, res) => {

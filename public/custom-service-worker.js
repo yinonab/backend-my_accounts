@@ -2,20 +2,29 @@ self.addEventListener("push", function (event) {
     console.log("🔔 Push event received!", event);
 
     if (event.data) {
-        const notificationData = event.data.json();
-        console.log("📩 Push Notification Data:", notificationData);
+        let notificationData;
 
-        event.waitUntil(
-            self.registration.showNotification(notificationData.title, {
-                body: notificationData.body,
-                icon: notificationData.icon || "https://res.cloudinary.com/dzqnyehxn/image/upload/v1739170705/notification-badge_p0oafv.png",
-                badge: notificationData.badge || "https://res.cloudinary.com/dzqnyehxn/image/upload/v1739170705/notification-badge_p0oafv.png",
-                vibrate: notificationData.vibrate || [200, 100, 200],
-                tag: notificationData.tag || "push-msg",
-                requireInteraction: notificationData.requireInteraction || false,
-                data: notificationData.data || {}
-            })
-        );
+        try {
+            const rawData = event.data.json();
+            notificationData = rawData.payload || rawData; // 🔹 בדיקה האם הנתונים עטופים ב-payload
+            console.log("📩 Parsed Push Notification Data:", notificationData);
+        } catch (error) {
+            console.error("❌ Error parsing push notification data:", error);
+            return;
+        }
+
+        const title = notificationData.title || "New Notification";
+        const options = {
+            body: notificationData.body || "You have a new message",
+            icon: notificationData.icon || "https://res.cloudinary.com/dzqnyehxn/image/upload/v1739170705/notification-badge_p0oafv.png",
+            badge: notificationData.badge || "https://res.cloudinary.com/dzqnyehxn/image/upload/v1739170705/notification-badge_p0oafv.png",
+            vibrate: notificationData.vibrate || [200, 100, 200],
+            tag: notificationData.tag || "push-msg",
+            requireInteraction: notificationData.requireInteraction || false,
+            data: notificationData.data || {}
+        };
+
+        event.waitUntil(self.registration.showNotification(title, options));
     } else {
         console.warn("⚠️ Push event received but no data!");
     }
