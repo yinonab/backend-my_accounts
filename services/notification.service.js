@@ -123,6 +123,9 @@ async function sendNotification(userId, payload) {
             icon: payload.icon ? 'PRESENT' : 'MISSING'
         }
     });
+    const defaultIcon = "https://res.cloudinary.com/dzqnyehxn/image/upload/v1739170705/notification-badge_p0oafv.png";
+    payload.icon = payload.icon || defaultIcon;
+    payload.badge = payload.badge || defaultIcon;
     console.log('Attempting to send notification:', {
         userId,
         payload
