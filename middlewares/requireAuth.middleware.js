@@ -10,8 +10,10 @@ const cryptr = new Cryptr(process.env.SECRET || 'Secret-Puk-1234');
 
 export async function requireAuth(req, res, next) {
 	try {
-		console.log('Headers:', req.headers); // Debug log
-		console.log('Cookies:', req.cookies); // Debug log
+		console.log('🛡️ Auth Middleware - Incoming Request');
+		console.log('🔍 Headers:', req.headers);
+		console.log('🍪 Cookies:', req.cookies);
+
 
 		// בדוק קוקיז קודם
 		let loginToken = req.cookies.loginToken;
@@ -40,6 +42,12 @@ export async function requireAuth(req, res, next) {
 
 		// הוסף משתמש מחובר לrequest
 		req.loggedinUser = loggedinUser;
+		console.log('✅ Authenticated User:', {
+			userId: loggedinUser._id,
+			email: loggedinUser.email || 'No email',
+			role: loggedinUser.isAdmin ? 'Admin' : 'User'
+		});
+
 		next();
 	} catch (err) {
 		console.error('Authentication failed:', err.message);
