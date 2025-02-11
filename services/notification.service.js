@@ -8,8 +8,10 @@ import { logger } from './logger.service.js';
 import dotenv from 'dotenv';
 dotenv.config(); // וודא שזה נטען
 if (!admin.apps.length) {
+    const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);  // טען את המפתח מתוך משתנה הסביבה
+
     admin.initializeApp({
-        credential: admin.credential.cert("./serviceAccountKey.json"),
+        credential: admin.credential.cert(serviceAccount),  // השתמש במפתח מתוך המשתנה
     });
 }
 
