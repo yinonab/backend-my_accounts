@@ -4,13 +4,15 @@
     "theme_color": "#1976d2",
     "background_color": "#fafafa",
     "display": "standalone",
-    "scope": "./",
-    "start_url": "./",
+    "scope": "/",
+    "start_url": "/",
     "icons": [
         {
             "src": "assets/icons/icon-72x72.png",
             "sizes": "72x72",
             "type": "image/png"
         }
-    ]
+    ],
+    "gcm_sender_id": "988437566016",
+    "gcm_sender_id_comment": "Firebase Cloud Messaging Sender ID"
 }

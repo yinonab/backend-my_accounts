@@ -1,6 +1,6 @@
 {
   "configVersion": 1,
-  "timestamp": 1739196772194,
+  "timestamp": 1739259328729,
   "index": "/index.html",
   "assetGroups": [
     {
@@ -13,8 +13,9 @@
       "urls": [
         "/custom-service-worker.js",
         "/favicon.ico",
+        "/firebase-messaging-sw.js",
         "/index.html",
-        "/main-FU777QYY.js",
+        "/main-OSDET3KA.js",
         "/manifest.webmanifest",
         "/polyfills-FFHMD2TL.js",
         "/styles-YSWAHAIC.css"
@@ -76,7 +77,8 @@
     {
       "name": "api-cache",
       "patterns": [
-        "\\/api\\/.*"
+        "\\/api\\/.*",
+        "https:\\/\\/fcm\\.googleapis\\.com\\/fcm\\/send"
       ],
       "strategy": "freshness",
       "maxSize": 100,
@@ -144,9 +146,10 @@
     "/assets/images/users.png": "2abfa4c086a43de978616aeffcc77b8063cc08af",
     "/custom-service-worker.js": "d4ee34c2929611c67178bca2ab20ce147d77056b",
     "/favicon.ico": "9c39f434fe1261f68c5e3eefdf734630d99c5670",
-    "/index.html": "de12470c7811a1673703c3346629a27bac802693",
-    "/main-FU777QYY.js": "6472dc1be16370ca4d0af3335de7365485c9f5d2",
-    "/manifest.webmanifest": "580ea5fe081869522a8ebb0d8184f6f82dccdd1d",
+    "/firebase-messaging-sw.js": "3c64185ccd75c19cfda528f4045a3173c9ed8756",
+    "/index.html": "5fd1dd11ca031c4f2917dc0d0f0519c3f65e4b6a",
+    "/main-OSDET3KA.js": "f51f0a1762750e22f2fe3a90044c597658eba09f",
+    "/manifest.webmanifest": "6ad0ca664b97d837da9e746a3991cde3af7b83b6",
     "/polyfills-FFHMD2TL.js": "f49b49a155bc7d192db62a4c15d0a612b460a667",
     "/styles-YSWAHAIC.css": "eb4ac7e8c0e6b5b083fd0aeb3de5c382b3691659"
   },
@@ -154,18 +157,6 @@
     {
       "positive": true,
       "regex": "^\\/.*$"
-    },
-    {
-      "positive": false,
-      "regex": "^\\/(?:.+\\/)?[^/]*\\.[^/]*$"
-    },
-    {
-      "positive": false,
-      "regex": "^\\/(?:.+\\/)?[^/]*__[^/]*$"
-    },
-    {
-      "positive": false,
-      "regex": "^\\/(?:.+\\/)?[^/]*__[^/]*\\/.*$"
     }
   ],
   "navigationRequestStrategy": "performance"
