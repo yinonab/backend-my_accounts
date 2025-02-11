@@ -23,7 +23,7 @@ messaging.onBackgroundMessage((payload) => {
     const notificationTitle = payload.notification.title;
     const notificationOptions = {
         body: payload.notification.body,
-        icon: payload.notification.icon || "/assets/notification-icon.png"
+        icon: payload.notification.icon || "https://res.cloudinary.com/dzqnyehxn/image/upload/v1739170705/notification-badge_p0oafv.png",
     };
 
     self.registration.showNotification(notificationTitle, notificationOptions);
