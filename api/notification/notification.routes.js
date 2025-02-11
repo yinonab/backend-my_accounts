@@ -13,31 +13,33 @@ const router = express.Router();
 // נרשם לנוטיפיקציות
 router.post('/', log, requireAuth, async (req, res) => {
     try {
-        const { subscription } = req.body;
+        const { token } = req.body;
         const userId = req.loggedinUser._id;
 
-        // בדיקת תקינות subscription
-        if (!subscription) {
-            return res.status(400).json({ error: 'Subscription is required' });
+        if (!token) {
+            return res.status(400).json({ error: "FCM Token is required" });
         }
 
+        console.log("🔔 Saving FCM Token for user:", userId);
+        console.log("🔔 Saving FCM Token for user:", token);
+
         // לוג בטוח יותר
-        console.log('Received request to save subscription:', {
-            userId,
-            subscriptionDetails: subscription ?
-                JSON.stringify(Object.keys(subscription)) :
-                'No subscription provided'
-        });
-        console.log('🔔 Received request to save subscription');
-        console.log('👤 Extracted userId from token:', userId);
-        console.log('📩 Subscription Keys:', subscription ? Object.keys(subscription) : 'No subscription provided');
+        // console.log('Received request to save subscription:', {
+        //     userId,
+        //     subscriptionDetails: subscription ?
+        //         JSON.stringify(Object.keys(subscription)) :
+        //         'No subscription provided'
+        // });
+        // console.log('🔔 Received request to save subscription');
+        // console.log('👤 Extracted userId from token:', userId);
+        // console.log('📩 Subscription Keys:', subscription ? Object.keys(subscription) : 'No subscription provided');
 
 
-        await notificationService.saveSubscription(subscription, userId);
-        res.status(201).json({ message: 'Subscription added successfully' });
+        await notificationService.saveSubscription(token, userId);
+        res.status(201).json({ message: "FCM Token saved successfully" });
     } catch (err) {
-        console.error('Error in subscribe:', err);
-        res.status(500).json({ error: 'Failed to subscribe to notifications' });
+        console.error("❌ Error saving FCM Token:", err);
+        res.status(500).json({ error: "Failed to save FCM Token" });
     }
 });
 router.get('/vapid-public-key', async (req, res) => {
@@ -84,29 +86,44 @@ router.get('/get-subscription', requireAuth, async (req, res) => {
 // });
 router.post('/send', log, requireAuth, async (req, res) => {
     try {
-        const userId = req.loggedinUser._id; // ✅ ה-ID מגיע ישירות מהטוקן
-        const { payload } = req.body; // ✅ מקבל רק את ה-payload מהלקוח
-        console.log("📩 Notification send request received:", { userId, payload });
+        const userId = req.loggedinUser._id;
+        const { title, body, token } = req.body;
+        //  console.log("📩 Notification send request received:", { userId, payload });
         console.log('Extracted userId from token:', req.loggedinUser._id);
         console.log('🚀 Preparing to send notification');
         console.log('👤 User ID from Token:', userId);
-        console.log('📨 Payload Received:', payload);
+        console.log('📨 Payload Received:', title);
+        console.log('📨 Payload Received:', body);
+        console.log('📨 Payload Received:', token);
 
-
-        await notificationService.sendNotification(userId, payload);
-        res.status(200).json({ message: 'Notification sent successfully' });
-    } catch (err) {
-        console.error('❌ Error sending notification:', err);
-
-        // ✅ שיפור התגובה ללקוח בהתאם לשגיאה
-        if (err.statusCode === 410 || err.statusCode === 404) {
-            return res.status(410).json({ error: 'Subscription no longer valid. Please re-subscribe.' });
-        } else if (err.statusCode === 429) {
-            return res.status(429).json({ error: 'Too many requests. Please try again later.' });
-        } else {
-            return res.status(500).json({ error: 'Failed to send notification' });
+        if (!title || !body) {
+            return res.status(400).json({ error: "Title and body are required" });
         }
+        console.log("🚀 Sending notification to user:", userId);
+        await notificationService.sendNotification(userId, { title, body, token });
+
+        res.status(200).json({ message: "Notification sent successfully" });
+    } catch (err) {
+        console.error("❌ Error sending notification:", err);
+        res.status(500).json({ error: "Failed to send notification" });
     }
 });
+
+
+//         await notificationService.sendNotification(userId, payload);
+//         res.status(200).json({ message: 'Notification sent successfully' });
+//     } catch (err) {
+//         console.error('❌ Error sending notification:', err);
+
+//         // ✅ שיפור התגובה ללקוח בהתאם לשגיאה
+//         if (err.statusCode === 410 || err.statusCode === 404) {
+//             return res.status(410).json({ error: 'Subscription no longer valid. Please re-subscribe.' });
+//         } else if (err.statusCode === 429) {
+//             return res.status(429).json({ error: 'Too many requests. Please try again later.' });
+//         } else {
+//             return res.status(500).json({ error: 'Failed to send notification' });
+//         }
+//     }
+// });
 
 export const notificationRoutes = router;

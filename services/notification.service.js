@@ -1,10 +1,19 @@
 // services/notification.service.js
+import admin from "firebase-admin";
+
 import webpush from 'web-push';
 import { config } from '../config/index.js';
 import { dbService } from './db.service.js';
 import { logger } from './logger.service.js';
 import dotenv from 'dotenv';
 dotenv.config(); // וודא שזה נטען
+if (!admin.apps.length) {
+    admin.initializeApp({
+        credential: admin.credential.cert("./serviceAccountKey.json"),
+    });
+}
+
+console.log("🔥 Firebase Admin SDK Initialized");
 console.log('🔍 Loading Notification Service', new Date().toISOString());
 console.log('🔑 Environment Variables:', {
     vapidPublicKey: config.notifications.vapidPublicKey ? 'VALID' : 'MISSING',
@@ -62,25 +71,25 @@ async function createIndexes() {
     }
 }
 
-async function saveSubscription(subscription, userId) {
-    console.log(`📥 Attempting to save subscription for user: ${userId}`, {
-        subscriptionDetails: {
-            endpoint: subscription.endpoint ? 'PRESENT' : 'MISSING',
-            keys: subscription.keys ? Object.keys(subscription.keys) : 'NO KEYS'
-        }
-    });
+async function saveSubscription(token, userId) {
+    // console.log(`📥 Attempting to save subscription for user: ${userId}`, {
+    //     subscriptionDetails: {
+    //         endpoint: token.endpoint ? 'PRESENT' : 'MISSING',
+    //         keys: subscription.keys ? Object.keys(subscription.keys) : 'NO KEYS'
+    //     }
+    // });
     try {
         console.log('Attempting to save subscription:', {
             userId,
-            subscription: JSON.stringify(subscription).substring(0, 100) + '...'
+            // subscription: JSON.stringify(subscription).substring(0, 100) + '...'
         });
         const collection = await dbService.getCollection(COLLECTION_NAME);
 
         // בדיקה אם כבר קיים subscription לאותו משתמש
         const existingSubscription = await collection.findOne({ userId });
-        if (existingSubscription && existingSubscription.subscription.endpoint === subscription.endpoint) {
-            console.log(`✅ Subscription for user: ${userId} is already up to date.`);
-            return; // 🔹 אם אין שינוי – לא לעדכן
+        if (existingSubscription && existingSubscription.token === token) {
+            console.log(`✅ Token for user: ${userId} is already up to date.`);
+            return;
         }
 
         if (existingSubscription) {
@@ -88,12 +97,7 @@ async function saveSubscription(subscription, userId) {
             // עדכון subscription קיים
             const updateResult = await collection.updateOne(
                 { userId },
-                {
-                    $set: {
-                        subscription,
-                        updatedAt: new Date()
-                    }
-                }
+                { $set: { token, updatedAt: new Date() } }
             );
             console.log('✅ Subscription update result:', updateResult);
 
@@ -102,12 +106,7 @@ async function saveSubscription(subscription, userId) {
         } else {
             console.log(`➕ Creating new subscription for user: ${userId}`);
             // יצירת subscription חדש
-            const insertResult = await collection.insertOne({
-                userId,
-                subscription,
-                createdAt: new Date(),
-                updatedAt: new Date()
-            });
+            const insertResult = await collection.insertOne({ userId, token, createdAt: new Date() });
             console.log('✅ Subscription insert result:', insertResult);
 
             logger.info(`Created new subscription for user: ${userId}`);
@@ -123,6 +122,7 @@ async function sendNotification(userId, payload) {
     console.log(`📤 Attempting to send notification to user: ${userId}`, {
         payloadDetails: {
             title: payload.title,
+            token: payload.token,
             body: payload.body,
             icon: payload.icon ? 'PRESENT' : 'MISSING'
         }
@@ -137,49 +137,47 @@ async function sendNotification(userId, payload) {
     try {
         const collection = await dbService.getCollection(COLLECTION_NAME);
         const userSubscription = await collection.findOne({ userId });
+        console.warn(`📤 Attempting to send notification to user: ${userId}`);
 
         if (!userSubscription) {
-            console.warn(`⚠️ No subscription found for user: ${userId}`);
-            logger.warn(`No subscription found for user: ${userId}`);
+            console.warn(`⚠️ No FCM token found for user: ${userId}`);
+            logger.warn(`No FCM token found for user: ${userId}`);
             return;
         }
         const subscription = userSubscription.subscription;
-        console.log('🚀 Preparing to send web push notification');
-        console.log('🚀 Sending web push notification to:', userSubscription.subscription.endpoint);
-        console.log('📨 Payload being sent:', JSON.stringify(payload, null, 2));
+        // console.log('🚀 Preparing to send web push notification');
+        // console.log('🚀 Sending web push notification to:', userSubscription.subscription.endpoint);
+        // console.log('📨 Payload being sent:', JSON.stringify(payload, null, 2));
 
 
-        try {
-            const pushResult = await webpush.sendNotification(
-                subscription,
-                JSON.stringify(payload)
-            );
-            console.log('✅ Notification sent successfully:', pushResult);
-            console.log('✅ Notification sent successfully', {
-                userId,
-                result: pushResult ? 'SUCCESS' : 'UNKNOWN_RESULT'
-            });
-        } catch (pushError) {
-            console.error('❌ Push notification error:', {
-                userId,
-                errorCode: pushError.statusCode,
-                errorMessage: pushError.message
-            });
+        const message = {
+            notification: {
+                title: payload.title,
+                body: payload.body,
+            },
+            android: {
+                notification: {
+                    icon: payload.icon,
+                },
+            },
+            apns: {
+                payload: {
+                    aps: {
+                        sound: "default",
+                    }
+                }
+            },
+            token: userSubscription.token,
+        };
 
-            // טיפול במנויים לא תקפים
-            if (pushError.statusCode === 410 || pushError.statusCode === 404) {
-                console.warn(`🗑️ Deleting invalid subscription for user: ${userId}`);
-                await collection.deleteOne({ userId });
-            } else if (pushError.statusCode === 429) {
-                console.warn('⚠️ Push Quota Exceeded! Try again later.');
-            } else if (pushError.statusCode >= 500) {
-                console.error('🚨 Server error while sending push notification.');
-            }
 
-            throw pushError;
-        }
+        console.log("📨 Sending FCM message:", message);
+
+        const response = await admin.messaging().send(message);
+
+        console.log("✅ Notification sent successfully:", response);
     } catch (err) {
-        console.error('❌ Notification sending failed:', err);
+        console.error("❌ Failed to send Firebase notification:", err);
         throw err;
     }
 }
