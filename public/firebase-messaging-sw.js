@@ -18,13 +18,26 @@ firebase.initializeApp(firebaseConfig);
 const messaging = firebase.messaging();
 
 // Event listener for background notifications
+// messaging.onBackgroundMessage((payload) => {
+//     console.log('📩 [Firebase Messaging SW] Received background message:', payload);
+//     const notificationTitle = payload.notification.title;
+//     const notificationOptions = {
+//         body: payload.notification.body,
+//         icon: payload.notification.icon || "https://res.cloudinary.com/dzqnyehxn/image/upload/v1739170705/notification-badge_p0oafv.png",
+//     };
+
+//     self.registration.showNotification(notificationTitle, notificationOptions);
+// });
 messaging.onBackgroundMessage((payload) => {
     console.log('📩 [Firebase Messaging SW] Received background message:', payload);
-    const notificationTitle = payload.notification.title;
+
+    const notificationTitle = payload.notification?.title || payload.data?.title || "New Notification";
     const notificationOptions = {
-        body: payload.notification.body,
-        icon: payload.notification.icon || "https://res.cloudinary.com/dzqnyehxn/image/upload/v1739170705/notification-badge_p0oafv.png",
+        body: payload.notification?.body || payload.data?.body || "You have a new message",
+        icon: payload.notification?.icon || payload.data?.icon || "https://res.cloudinary.com/dzqnyehxn/image/upload/v1739170705/notification-badge_p0oafv.png",
+        data: payload.data
     };
 
     self.registration.showNotification(notificationTitle, notificationOptions);
 });
+
