@@ -157,10 +157,14 @@ async function sendNotification(userId, payload) {
                 title: payload.title,
                 body: payload.body,
                 icon: "https://res.cloudinary.com/dzqnyehxn/image/upload/v1739170705/notification-badge_p0oafv.png",
+                sound: "default",
             },
             android: {
                 data: {
+                    title: payload.title,
+                    body: payload.body,
                     icon: "https://res.cloudinary.com/dzqnyehxn/image/upload/v1739170705/notification-badge_p0oafv.png",
+                    sound: "default",
                 },
             },
             apns: {
