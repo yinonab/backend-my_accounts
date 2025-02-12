@@ -8,8 +8,18 @@
     "scope": "/",
     "icons": [
         {
-            "src": "assets/icons/icon-72x72.png",
+            "src": "https://res.cloudinary.com/dzqnyehxn/image/upload/v1739337559/video-chat_brgqz0.png",
             "sizes": "72x72",
+            "type": "image/png"
+        },
+        {
+            "src": "https://res.cloudinary.com/dzqnyehxn/image/upload/v1739344019/android-chrome-192x192_wokjrg.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "https://res.cloudinary.com/dzqnyehxn/image/upload/v1739344019/android-chrome-512x512_m0a2tz.png",
+            "sizes": "512x512",
             "type": "image/png"
         }
     ],
