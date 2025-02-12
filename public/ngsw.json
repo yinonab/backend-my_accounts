@@ -1,6 +1,6 @@
 {
   "configVersion": 1,
-  "timestamp": 1739338008234,
+  "timestamp": 1739342678657,
   "index": "/index.html",
   "assetGroups": [
     {
@@ -151,7 +151,7 @@
     "/firebase-messaging-sw.js": "cc48dace0d21e3d4df9a99949fb80e43ba2d5a80",
     "/index.html": "d55cf4f8eb7524bf06c669883ee54310ad9a2702",
     "/main-UMWYFBVB.js": "72ff073a851548641170cb5d5781d76a143c7997",
-    "/manifest.webmanifest": "6ad0ca664b97d837da9e746a3991cde3af7b83b6",
+    "/manifest.webmanifest": "be1f5452fae79fe8e4430bf812bc1ff456886c2a",
     "/polyfills-FFHMD2TL.js": "f49b49a155bc7d192db62a4c15d0a612b460a667",
     "/styles-YSWAHAIC.css": "eb4ac7e8c0e6b5b083fd0aeb3de5c382b3691659"
   },
