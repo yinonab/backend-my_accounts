@@ -19,8 +19,8 @@ export async function login(req, res) {
 			, // Use secure cookies only in production
 			maxAge: 30 * 24 * 60 * 60 * 1000,
 		});
-		res.status(200).json(user);
 		res.status(200).json({ user, loginToken });
+
 	} catch (err) {
 		logger.error('Failed to Login:', err.message);
 		res.status(401).send({ err: 'Failed to Login' });
