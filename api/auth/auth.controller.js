@@ -17,8 +17,10 @@ export async function login(req, res) {
 			sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax', // Adjust for environment
 			secure: process.env.NODE_ENV === 'production' ? true : false
 			, // Use secure cookies only in production
+			maxAge: 30 * 24 * 60 * 60 * 1000,
 		});
 		res.status(200).json(user);
+		res.status(200).json({ user, loginToken });
 	} catch (err) {
 		logger.error('Failed to Login:', err.message);
 		res.status(401).send({ err: 'Failed to Login' });
@@ -112,4 +114,8 @@ export async function logout(req, res) {
 		logger.error('Failed to logout:', err.message);
 		res.status(400).send({ err: 'Failed to logout' });
 	}
+}
+export async function ping(req, res) {
+	console.log("🔄 Keep-Alive Ping התקבל");
+	res.status(200).send({ msg: "Session is active" });
 }

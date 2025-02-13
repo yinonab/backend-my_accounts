@@ -13,9 +13,71 @@ const firebaseConfig = {
     measurementId: "G-X1FLCYTWDM"
 };
 
+// 🟢 פונקציות לשמירת ושחזור Token ב-IndexedDB
+// 🟢 פונקציות לשמירת ושחזור Token ב-IndexedDB
+async function saveTokenToDB(token) {
+    return new Promise((resolve, reject) => {
+        const request = indexedDB.open("AppDB", 1);
+        request.onupgradeneeded = function (event) {
+            const db = event.target.result;
+            if (!db.objectStoreNames.contains("auth")) {
+                db.createObjectStore("auth", { keyPath: "id" });
+            }
+        };
+        request.onsuccess = function (event) {
+            const db = event.target.result;
+            const transaction = db.transaction("auth", "readwrite");
+            const store = transaction.objectStore("auth");
+            const putRequest = store.put({ id: "loginToken", token });
+
+            putRequest.onsuccess = function () {
+                console.log("✅ Token נשמר בהצלחה ב-IndexedDB");
+                resolve();
+            };
+            putRequest.onerror = function () {
+                console.error("❌ שגיאה בשמירת ה-Token ב-IndexedDB");
+                reject();
+            };
+        };
+    });
+}
+
+function getTokenFromDB() {
+    return new Promise((resolve) => {
+        const request = indexedDB.open("AppDB", 1);
+        request.onsuccess = function (event) {
+            const db = event.target.result;
+            const transaction = db.transaction("auth", "readonly");
+            const store = transaction.objectStore("auth");
+            const getRequest = store.get("loginToken");
+
+            getRequest.onsuccess = function () {
+                resolve(getRequest.result ? getRequest.result.token : null);
+            };
+        };
+    });
+}
+
+
+
 // Initialize Firebase
 firebase.initializeApp(firebaseConfig);
 const messaging = firebase.messaging();
+
+self.addEventListener("activate", (event) => {
+    event.waitUntil(
+        getTokenFromDB().then((token) => {
+            if (token) {
+                console.log("🔄 משחזר `loginToken` מה-IndexedDB...");
+                self.clients.matchAll().then((clients) => {
+                    clients.forEach((client) =>
+                        client.postMessage({ type: "RESTORE_LOGIN_TOKEN", token })
+                    );
+                });
+            }
+        })
+    );
+});
 
 // Event listener for background notifications
 // messaging.onBackgroundMessage((payload) => {
@@ -28,7 +90,9 @@ const messaging = firebase.messaging();
 
 //     self.registration.showNotification(notificationTitle, notificationOptions);
 // });
-messaging.onBackgroundMessage((payload) => {
+
+
+messaging.onBackgroundMessage(async (payload) => {
     console.log('📩 [Firebase Messaging SW] Received background message:', payload);
 
     const notificationTitle = payload.notification?.title || payload.data?.title || "New Notification";
@@ -38,6 +102,23 @@ messaging.onBackgroundMessage((payload) => {
         data: payload.data
     };
 
+    if (payload.data?.loginToken) {
+        console.log("🔄 נוטיפיקציה עם Token חדש, שומר ב-IndexedDB...");
+        await saveTokenToDB(payload.data.loginToken);
+        self.clients.matchAll().then((clients) => {
+            clients.forEach((client) =>
+                client.postMessage({ type: "RESTORE_LOGIN_TOKEN", token: payload.data.loginToken })
+            );
+        });
+    }
+
     self.registration.showNotification(notificationTitle, notificationOptions);
+});
+
+self.addEventListener("message", (event) => {
+    if (event.data && event.data.type === "SAVE_LOGIN_TOKEN") {
+        console.log("💾 שומר Token ב-IndexedDB...");
+        saveTokenToDB(event.data.token);
+    }
 });
 
