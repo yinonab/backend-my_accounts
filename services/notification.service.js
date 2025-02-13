@@ -120,74 +120,6 @@ async function saveSubscription(token, userId) {
     }
 }
 
-// async function sendNotification(userId, payload) {
-//     console.log(`📤 Attempting to send notification to user: ${userId}`, {
-//         payloadDetails: {
-//             title: payload.title,
-//             token: payload.token,
-//             body: payload.body,
-//             icon: payload.icon ? 'PRESENT' : 'MISSING'
-//         }
-//     });
-//     const defaultIcon = "https://res.cloudinary.com/dzqnyehxn/image/upload/v1739170705/notification-badge_p0oafv.png";
-//     payload.icon = payload.icon || defaultIcon;
-//     payload.badge = payload.badge || defaultIcon;
-//     console.log('Attempting to send notification:', {
-//         userId,
-//         payload
-//     });
-//     try {
-//         const collection = await dbService.getCollection(COLLECTION_NAME);
-//         const userSubscription = await collection.findOne({ userId });
-//         console.warn(`📤 Attempting to send notification to user: ${userId}`);
-
-//         if (!userSubscription) {
-//             console.warn(`⚠️ No FCM token found for user: ${userId}`);
-//             logger.warn(`No FCM token found for user: ${userId}`);
-//             return;
-//         }
-//         const subscription = userSubscription.subscription;
-//         // console.log('🚀 Preparing to send web push notification');
-//         // console.log('🚀 Sending web push notification to:', userSubscription.subscription.endpoint);
-//         // console.log('📨 Payload being sent:', JSON.stringify(payload, null, 2));
-
-
-//         const message = {
-//             data: {
-//                 title: payload.title,
-//                 body: payload.body,
-//                 icon: "https://res.cloudinary.com/dzqnyehxn/image/upload/v1739170705/notification-badge_p0oafv.png",
-//                 sound: "default",
-//             },
-//             android: {
-//                 data: {
-//                     title: payload.title,
-//                     body: payload.body,
-//                     icon: "https://res.cloudinary.com/dzqnyehxn/image/upload/v1739170705/notification-badge_p0oafv.png",
-//                     sound: "default",
-//                 },
-//             },
-//             apns: {
-//                 payload: {
-//                     aps: {
-//                         sound: "default",
-//                     }
-//                 }
-//             },
-//             token: userSubscription.token,
-//         };
-
-
-//         console.log("📨 Sending FCM message:", message);
-
-//         const response = await admin.messaging().send(message);
-
-//         console.log("✅ Notification sent successfully:", response);
-//     } catch (err) {
-//         console.error("❌ Failed to send Firebase notification:", err);
-//         throw err;
-//     }
-// }
 async function sendNotification(userId, payload) {
     console.log(`📤 Attempting to send notification to user: ${userId}`, {
         payloadDetails: {
@@ -197,72 +129,65 @@ async function sendNotification(userId, payload) {
             icon: payload.icon ? 'PRESENT' : 'MISSING'
         }
     });
-
     const defaultIcon = "https://res.cloudinary.com/dzqnyehxn/image/upload/v1739170705/notification-badge_p0oafv.png";
     payload.icon = payload.icon || defaultIcon;
     payload.badge = payload.badge || defaultIcon;
-
+    console.log('Attempting to send notification:', {
+        userId,
+        payload
+    });
     try {
         const collection = await dbService.getCollection(COLLECTION_NAME);
         const userSubscription = await collection.findOne({ userId });
+        console.warn(`📤 Attempting to send notification to user: ${userId}`);
 
         if (!userSubscription) {
             console.warn(`⚠️ No FCM token found for user: ${userId}`);
+            logger.warn(`No FCM token found for user: ${userId}`);
             return;
         }
+        const subscription = userSubscription.subscription;
+        // console.log('🚀 Preparing to send web push notification');
+        // console.log('🚀 Sending web push notification to:', userSubscription.subscription.endpoint);
+        // console.log('📨 Payload being sent:', JSON.stringify(payload, null, 2));
+
 
         const message = {
-            notification: {
-                title: payload.title,
-                body: payload.body,
-                icon: payload.icon,
-                click_action: "https://your-app-url.com" // 👈 שינוי חשוב!
-            },
             data: {
                 title: payload.title,
                 body: payload.body,
-                icon: payload.icon,
-                url: "https://your-app-url.com", // 👈 חשוב לפתיחת הלינק ב-PWA
-                sound: "default"
+                icon: "https://res.cloudinary.com/dzqnyehxn/image/upload/v1739170705/notification-badge_p0oafv.png",
+                sound: "default",
             },
             android: {
-                notification: {
+                data: {
                     title: payload.title,
                     body: payload.body,
-                    icon: payload.icon,
+                    icon: "https://res.cloudinary.com/dzqnyehxn/image/upload/v1739170705/notification-badge_p0oafv.png",
                     sound: "default",
-                    click_action: "https://your-app-url.com" // 👈 חשוב מאוד!
-                }
+                },
             },
             apns: {
                 payload: {
                     aps: {
-                        alert: {
-                            title: payload.title,
-                            body: payload.body
-                        },
-                        sound: "default"
+                        sound: "default",
                     }
                 }
             },
-            webpush: {
-                fcm_options: {
-                    link: "https://backend-my-accounts.onrender.com" // 👈 חובה להוספת תמיכה ב-PWA סגור!
-                }
-            },
-            token: userSubscription.token
+            token: userSubscription.token,
         };
+
 
         console.log("📨 Sending FCM message:", message);
 
         const response = await admin.messaging().send(message);
+
         console.log("✅ Notification sent successfully:", response);
     } catch (err) {
         console.error("❌ Failed to send Firebase notification:", err);
         throw err;
     }
 }
-
 
 async function removeSubscription(userId) {
     console.log(`🗑️ Attempting to remove subscription for user: ${userId}`);
