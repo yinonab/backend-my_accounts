@@ -24,10 +24,24 @@ export function setupSocketAPI(http) {
             ip: socket.handshake.address
         });
         // 🟢 ניטור חיבורי Keep-Alive
+        // socket.on('ping', () => {
+        //     logger.info(`📡 Received ping from client [id: ${socket.id}]`);
+        //     socket.emit('pong'); // מחזיר Pong כדי לשמור על החיבור
+        // });
         socket.on('ping', () => {
             logger.info(`📡 Received ping from client [id: ${socket.id}]`);
-            socket.emit('pong'); // מחזיר Pong כדי לשמור על החיבור
+
+            if (!socket.userId) {
+                logger.warn(`⚠️ User is not authenticated, attempting to restore session...`);
+                socket.emit('set-user-socket', {
+                    userId: socket.userId,
+                    username: socket.username
+                });
+            }
+
+            socket.emit('pong'); // מחזיר pong כדי לשמור על החיבור
         });
+
 
         socket.on('pong', () => {
             logger.info(`🏓 Pong received from client [id: ${socket.id}]`);
@@ -37,21 +51,54 @@ export function setupSocketAPI(http) {
             logger.info(`❤️‍🔥 Heartbeat received from [id: ${socket.id}]`);
         });
         socket.on('disconnect', (reason) => {
-            logger.info(`❌ Socket disconnected [id: ${socket.id}], reason: ${reason}`);
+            logger.warn(`❌ Socket disconnected [id: ${socket.id}], reason: ${reason}`);
+
+            if (socket.userId) {
+                logger.info(`🔄 מנסה לחבר מחדש את המשתמש ${socket.userId} בעוד 5 שניות...`);
+
+                setTimeout(() => {
+                    const targetSocket = _getUserSocket(socket.userId);
+                    if (!targetSocket) { // רק אם אין כבר חיבור פעיל
+                        gIo.to(socket.id).emit('set-user-socket', {
+                            userId: socket.userId,
+                            username: socket.username
+                        });
+                        logger.info(`✅ שלח בקשה לחיבור מחדש עבור ${socket.userId}`);
+                    } else {
+                        logger.info(`🔵 למשתמש ${socket.userId} כבר יש חיבור פעיל, לא מחבר מחדש.`);
+                    }
+                }, 5000); // מחכה 5 שניות לפני ניסיון החיבור מחדש
+            }
         });
+
         // socket.on('disconnect', socket => {
         //     logger.info(`Socket disconnected [id: ${socket.id}]`)
         // })
 
         // 🟢 חיבור מחדש של משתמשים במקרה של ניתוק
+        // socket.on('connect', () => {
+        //     if (socket.userId) {
+        //         logger.info(`🔄 Re-authenticating socket with userId: ${socket.userId}`);
+        //         socket.emit('set-user-socket', { userId: socket.userId, username: socket.username });
+        //     } else {
+        //         logger.warn(`⚠️ New socket connection without authentication. User must log in.`);
+        //     }
+        // });
         socket.on('connect', () => {
+            logger.info(`🔄 Socket connected again [id: ${socket.id}]`);
+
             if (socket.userId) {
-                logger.info(`🔄 Re-authenticating socket with userId: ${socket.userId}`);
+                logger.info(`✅ User ${socket.userId} is re-authenticating`);
                 socket.emit('set-user-socket', { userId: socket.userId, username: socket.username });
             } else {
-                logger.warn(`⚠️ New socket connection without authentication. User must log in.`);
+                logger.warn(`⚠️ No userId found, attempting to restore session...`);
+
+                // מנסה לשחזר את החיבור דרך Event יזום ללקוח
+                socket.emit('request-user-data');
             }
         });
+
+
         socket.on('chat-set-topic', topic => {
             if (socket.myTopic === topic) return
             if (socket.myTopic) {
