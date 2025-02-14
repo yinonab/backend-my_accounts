@@ -16,8 +16,6 @@ const firebaseConfig = {
 // 🟢 פונקציות לשמירת ושחזור Token ב-IndexedDB
 // 🟢 פונקציות לשמירת ושחזור Token ב-IndexedDB
 async function saveTokenToDB(token) {
-    localStorage.setItem("loginTokenBackup", token); // 🔄 שמירת טוקן גם ב-LocalStorage
-
     return new Promise((resolve, reject) => {
         const request = indexedDB.open("AppDB", 1);
         request.onupgradeneeded = function (event) {
@@ -122,22 +120,5 @@ self.addEventListener("message", (event) => {
         console.log("💾 שומר Token ב-IndexedDB...");
         saveTokenToDB(event.data.token);
     }
-});
-self.addEventListener("notificationclick", (event) => {
-    console.log("🔔 התראה נלחצה:", event.notification);
-    event.notification.close();
-
-    event.waitUntil(
-        clients.matchAll({ type: "window" }).then((clientList) => {
-            for (const client of clientList) {
-                if (client.url && "focus" in client) {
-                    return client.focus();
-                }
-            }
-            if (clients.openWindow) {
-                return clients.openWindow(event.notification.data?.url || "/users");
-            }
-        })
-    );
 });
 
