@@ -12,18 +12,46 @@ export function setupSocketAPI(http) {
             transports: ['websocket', 'polling']
         },
         allowEIO3: true,
+        pingInterval: 25000,
         pingTimeout: 60000
     });
     gIo.on('connection', socket => {
         logger.info(`New connected socket [id: ${socket.id}]`)
-        logger.info(`New connected socket [id: ${socket.id}]`, {
+        logger.info(`✅ New connected socket [id: ${socket.id}]`)
+        logger.info(`🖥️ Connection details`, {
             userAgent: socket.handshake.headers['user-agent'],
             transport: socket.conn.transport.name,
             ip: socket.handshake.address
         });
-        socket.on('disconnect', socket => {
-            logger.info(`Socket disconnected [id: ${socket.id}]`)
-        })
+        // 🟢 ניטור חיבורי Keep-Alive
+        socket.on('ping', () => {
+            logger.info(`📡 Received ping from client [id: ${socket.id}]`);
+            socket.emit('pong'); // מחזיר Pong כדי לשמור על החיבור
+        });
+
+        socket.on('pong', () => {
+            logger.info(`🏓 Pong received from client [id: ${socket.id}]`);
+        });
+
+        socket.conn.on('heartbeat', () => {
+            logger.info(`❤️‍🔥 Heartbeat received from [id: ${socket.id}]`);
+        });
+        socket.on('disconnect', (reason) => {
+            logger.info(`❌ Socket disconnected [id: ${socket.id}], reason: ${reason}`);
+        });
+        // socket.on('disconnect', socket => {
+        //     logger.info(`Socket disconnected [id: ${socket.id}]`)
+        // })
+
+        // 🟢 חיבור מחדש של משתמשים במקרה של ניתוק
+        socket.on('connect', () => {
+            if (socket.userId) {
+                logger.info(`🔄 Re-authenticating socket with userId: ${socket.userId}`);
+                socket.emit('set-user-socket', { userId: socket.userId, username: socket.username });
+            } else {
+                logger.warn(`⚠️ New socket connection without authentication. User must log in.`);
+            }
+        });
         socket.on('chat-set-topic', topic => {
             if (socket.myTopic === topic) return
             if (socket.myTopic) {
@@ -99,6 +127,17 @@ export function setupSocketAPI(http) {
             socket.userId = userId;
             socket.username = username;
         });
+        // האזנה לאירוע Keep Alive מהלקוח
+        socket.on('ping', () => {
+            logger.info(`📡 Received ping from client [id: ${socket.id}]`);
+            socket.emit('pong'); // החזרת pong כדי לשמור על החיבור
+        });
+
+        // זיהוי חיבורי Socket שהתנתקו
+        socket.conn.on('heartbeat', () => {
+            logger.info(`❤️‍🔥 Heartbeat received from [id: ${socket.id}]`);
+        });
+
         socket.on('connect', () => {
             if (socket.userId) {
                 logger.info(`🔄 Re-authenticating socket with userId: ${socket.userId}`);
