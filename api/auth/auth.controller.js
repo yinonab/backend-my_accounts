@@ -115,7 +115,12 @@ export async function logout(req, res) {
 		res.status(400).send({ err: 'Failed to logout' });
 	}
 }
+// export async function ping(req, res) {
+// 	console.log("🔄 Keep-Alive Ping התקבל");
+// 	res.status(200).send({ msg: "Session is active" });
+// }
 export async function ping(req, res) {
-	console.log("🔄 Keep-Alive Ping התקבל");
-	res.status(200).send({ msg: "Session is active" });
+	const userId = req.user?.id || req.user?._id || "Unknown User"; // בדיקה אם קיים `userId`
+	console.log(`🔄 Keep-Alive Ping התקבל עבור userId: ${userId}`);
+	res.status(200).send({ msg: "Session is active", userId });
 }
