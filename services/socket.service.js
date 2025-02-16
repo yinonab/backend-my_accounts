@@ -13,7 +13,7 @@ export function setupSocketAPI(http) {
         },
         allowEIO3: true,
         pingInterval: 25000,
-        pingTimeout: 120000
+        pingTimeout: 180000
     });
     gIo.on('connection', socket => {
         logger.info(`New connected socket [id: ${socket.id}]`)

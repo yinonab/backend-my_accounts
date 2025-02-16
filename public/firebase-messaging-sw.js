@@ -101,6 +101,7 @@ messaging.onBackgroundMessage(async (payload) => {
         icon: payload.notification?.icon || payload.data?.icon || "https://res.cloudinary.com/dzqnyehxn/image/upload/v1739170705/notification-badge_p0oafv.png",
         data: payload.data
     };
+    self.registration.showNotification(notificationTitle, notificationOptions);
 
     if (payload.data?.loginToken) {
         console.log("🔄 נוטיפיקציה עם Token חדש, שומר ב-IndexedDB...");
@@ -112,7 +113,12 @@ messaging.onBackgroundMessage(async (payload) => {
         });
     }
 
-    self.registration.showNotification(notificationTitle, notificationOptions);
+    if (payload.data?.wakeUpApp) {
+        console.log("📲 מעיר את האפליקציה...");
+        self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clients) => {
+            clients.forEach(client => client.postMessage({ type: "WAKE_UP" }));
+        });
+    }
 });
 
 self.addEventListener("message", (event) => {
@@ -120,5 +126,10 @@ self.addEventListener("message", (event) => {
         console.log("💾 שומר Token ב-IndexedDB...");
         saveTokenToDB(event.data.token);
     }
+    if (event.data?.type === "WAKE_UP") {
+        console.log("📲 קיבלנו בקשת Wake-Up, מחזירים הודעה ל-Client");
+        self.clients.matchAll().then((clients) => {
+            clients.forEach((client) => client.postMessage({ type: "WAKE_UP" }));
+        });
+    }
 });
-
