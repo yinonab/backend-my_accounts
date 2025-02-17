@@ -129,72 +129,61 @@ async function sendNotification(userId, payload) {
             icon: payload.icon ? 'PRESENT' : 'MISSING'
         }
     });
+
     const defaultIcon = "https://res.cloudinary.com/dzqnyehxn/image/upload/v1739170705/notification-badge_p0oafv.png";
     payload.icon = payload.icon || defaultIcon;
     payload.badge = payload.badge || defaultIcon;
-    console.log('Attempting to send notification:', {
-        userId,
-        payload
-    });
+
     try {
         const collection = await dbService.getCollection(COLLECTION_NAME);
         const userSubscription = await collection.findOne({ userId });
-        console.warn(`📤 Attempting to send notification to user: ${userId}`);
 
         if (!userSubscription) {
             console.warn(`⚠️ No FCM token found for user: ${userId}`);
-            logger.warn(`No FCM token found for user: ${userId}`);
             return;
         }
-        const subscription = userSubscription.subscription;
-        // console.log('🚀 Preparing to send web push notification');
-        // console.log('🚀 Sending web push notification to:', userSubscription.subscription.endpoint);
-        // console.log('📨 Payload being sent:', JSON.stringify(payload, null, 2));
-
 
         const message = {
-            data: {
+            notification: { // 🔹 מכיל רק title ו-body (נדרש ב-Web Push)
                 title: payload.title,
-                body: payload.body,
-                icon: "https://res.cloudinary.com/dzqnyehxn/image/upload/v1739170705/notification-badge_p0oafv.png",
+                body: payload.body
+            },
+            data: { // 🔹 כל שאר הנתונים יועברו לכאן
+                title: String(payload.title),
+                body: String(payload.body),
+                icon: String(payload.icon), // ✅ שמירת האייקון ב-data
                 sound: "default",
-                wakeUpApp: payload.wakeUpApp ? "true" : "false"
-
-
+                wakeUpApp: String(payload.wakeUpApp ?? true)
             },
             android: {
                 priority: "high",
                 data: {
-                    title: payload.title,
-                    body: payload.body,
-                    icon: "https://res.cloudinary.com/dzqnyehxn/image/upload/v1739170705/notification-badge_p0oafv.png",
+                    title: String(payload.title),
+                    body: String(payload.body),
+                    icon: String(payload.icon),
                     sound: "default",
-                    wakeUpApp: payload.wakeUpApp ? "true" : "false"
-
-
-                },
+                    wakeUpApp: String(payload.wakeUpApp ?? true)
+                }
             },
             apns: {
                 payload: {
                     aps: {
-                        sound: "default",
+                        sound: "default"
                     }
                 }
             },
             token: userSubscription.token,
         };
 
-
         console.log("📨 Sending FCM message:", message);
-
         const response = await admin.messaging().send(message);
-
         console.log("✅ Notification sent successfully:", response);
     } catch (err) {
         console.error("❌ Failed to send Firebase notification:", err);
         throw err;
     }
 }
+
 
 async function removeSubscription(userId) {
     console.log(`🗑️ Attempting to remove subscription for user: ${userId}`);

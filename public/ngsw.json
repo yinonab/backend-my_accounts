@@ -1,6 +1,6 @@
 {
   "configVersion": 1,
-  "timestamp": 1739795251047,
+  "timestamp": 1739801040177,
   "index": "/index.html",
   "assetGroups": [
     {
@@ -14,7 +14,7 @@
         "/favicon.ico",
         "/firebase-messaging-sw.js",
         "/index.html",
-        "/main-CC3QTZ6R.js",
+        "/main-OPNSLPIP.js",
         "/manifest.webmanifest",
         "/polyfills-FFHMD2TL.js",
         "/styles-YSWAHAIC.css",
@@ -146,9 +146,9 @@
     "/assets/images/users.png": "2abfa4c086a43de978616aeffcc77b8063cc08af",
     "/assets/images/video-chat.png": "979c9d4d1da30b74fab18375975d7e26f4e5559c",
     "/favicon.ico": "9c39f434fe1261f68c5e3eefdf734630d99c5670",
-    "/firebase-messaging-sw.js": "c428efc1548b7da1a3cd47bf4fd48fab1faa3a2e",
-    "/index.html": "88e77f2c53772da7e77c8e2e5d794cefee6d3893",
-    "/main-CC3QTZ6R.js": "ff374ab567c753e0afd78ba278607acc18cf95f4",
+    "/firebase-messaging-sw.js": "b83055e8ea8a87fb751b435e94e143367e99722f",
+    "/index.html": "c43e002abbcac4205e0eabc4ac78e51cca44a27c",
+    "/main-OPNSLPIP.js": "03f68f1b3598af123368e29c1c2d8eda8a0772b3",
     "/manifest.webmanifest": "bfe273329f06279c25f5259753c635490641efd8",
     "/polyfills-FFHMD2TL.js": "f49b49a155bc7d192db62a4c15d0a612b460a667",
     "/styles-YSWAHAIC.css": "eb4ac7e8c0e6b5b083fd0aeb3de5c382b3691659",
