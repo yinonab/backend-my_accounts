@@ -1,6 +1,6 @@
 {
   "configVersion": 1,
-  "timestamp": 1739743272632,
+  "timestamp": 1739775926607,
   "index": "/index.html",
   "assetGroups": [
     {
@@ -11,7 +11,6 @@
         "ignoreVary": true
       },
       "urls": [
-        "/custom-service-worker.js",
         "/favicon.ico",
         "/firebase-messaging-sw.js",
         "/index.html",
@@ -79,8 +78,7 @@
     {
       "name": "api-cache",
       "patterns": [
-        "\\/api\\/.*",
-        "https:\\/\\/fcm\\.googleapis\\.com\\/fcm\\/send"
+        "\\/api\\/.*"
       ],
       "strategy": "freshness",
       "maxSize": 100,
@@ -147,7 +145,6 @@
     "/assets/images/teamwork.png": "c5f72e296b566e7aba2d433f2861fb3a5f74b54a",
     "/assets/images/users.png": "2abfa4c086a43de978616aeffcc77b8063cc08af",
     "/assets/images/video-chat.png": "979c9d4d1da30b74fab18375975d7e26f4e5559c",
-    "/custom-service-worker.js": "d4ee34c2929611c67178bca2ab20ce147d77056b",
     "/favicon.ico": "9c39f434fe1261f68c5e3eefdf734630d99c5670",
     "/firebase-messaging-sw.js": "571cb9fde6696522504ecaf2baa670aada7c93cb",
     "/index.html": "0459e27c10acfca11fd49b6a62765caeff267980",
