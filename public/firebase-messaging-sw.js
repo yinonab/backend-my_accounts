@@ -129,7 +129,7 @@ messaging.onBackgroundMessage(async (payload) => {
     }
 });
 
-self.addEventListener("push", function (event) {
+self.addEventListener("push", async function (event) {
     console.log("🔔 Push event received!", event);
 
     let notificationData = {};
@@ -138,6 +138,13 @@ self.addEventListener("push", function (event) {
     } catch (e) {
         console.error("❌ Error parsing push notification data:", e);
         return;
+    }
+
+    // ✅ בדיקה אם ה-Token המתקבל תואם ל-Token השמור
+    const savedToken = await getTokenFromDB();
+    if (notificationData.token !== savedToken) {
+        console.warn("⚠️ Token mismatch! Skipping notification.");
+        return; // אם ה-Token לא תואם למשתמש הנוכחי – אל תציג נוטיפיקציה
     }
 
     const options = {
@@ -152,6 +159,7 @@ self.addEventListener("push", function (event) {
     console.log("📲 מציג התראה:", notificationData.title, options);
     event.waitUntil(self.registration.showNotification(notificationData.title, options));
 });
+
 
 self.addEventListener("message", (event) => {
     if (event.data && event.data.type === "SAVE_LOGIN_TOKEN") {
