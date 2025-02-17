@@ -158,7 +158,9 @@ async function sendNotification(userId, payload) {
                 body: payload.body,
                 icon: "https://res.cloudinary.com/dzqnyehxn/image/upload/v1739170705/notification-badge_p0oafv.png",
                 sound: "default",
-                wakeUpApp: true,
+                wakeUpApp: payload.wakeUpApp ? "true" : "false"
+
+
             },
             android: {
                 priority: "high",
@@ -167,7 +169,9 @@ async function sendNotification(userId, payload) {
                     body: payload.body,
                     icon: "https://res.cloudinary.com/dzqnyehxn/image/upload/v1739170705/notification-badge_p0oafv.png",
                     sound: "default",
-                    wakeUpApp: true,
+                    wakeUpApp: payload.wakeUpApp ? "true" : "false"
+
+
                 },
             },
             apns: {
