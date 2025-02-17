@@ -158,13 +158,16 @@ async function sendNotification(userId, payload) {
                 body: payload.body,
                 icon: "https://res.cloudinary.com/dzqnyehxn/image/upload/v1739170705/notification-badge_p0oafv.png",
                 sound: "default",
+                wakeUpApp: "true",
             },
             android: {
+                priority: "high",
                 data: {
                     title: payload.title,
                     body: payload.body,
                     icon: "https://res.cloudinary.com/dzqnyehxn/image/upload/v1739170705/notification-badge_p0oafv.png",
                     sound: "default",
+                    wakeUpApp: "true",
                 },
             },
             apns: {
