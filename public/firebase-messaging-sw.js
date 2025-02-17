@@ -96,10 +96,10 @@ messaging.onBackgroundMessage(async (payload) => {
     console.log('📩 [Firebase Messaging SW] Received background message:', payload);
 
     // ⚠️ לא משתמשים ב-payload.notification, אלא רק ב-payload.data
-    const notificationTitle = payload.notification?.title || payload.data?.title || "🔔 הודעה חדשה";
+    const notificationTitle = payload.data?.title || "🔔 הודעה חדשה";
     const notificationOptions = {
-        body: payload.notification?.body || payload.data?.body || "📩 יש לך הודעה חדשה!",
-        icon: payload.notification?.icon || payload.data?.icon || "https://res.cloudinary.com/dzqnyehxn/image/upload/v1739170705/notification-badge_p0oafv.png",
+        body: payload.data?.body || "📩 יש לך הודעה חדשה!",
+        icon: payload.data?.icon || "https://res.cloudinary.com/dzqnyehxn/image/upload/v1739170705/notification-badge_p0oafv.png",
         badge: payload.data?.badge || "https://res.cloudinary.com/dzqnyehxn/image/upload/v1739170705/notification-badge_p0oafv.png",
         vibrate: [200, 100, 200],
         requireInteraction: true,
