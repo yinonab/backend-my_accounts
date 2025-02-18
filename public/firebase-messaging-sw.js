@@ -85,7 +85,7 @@ self.addEventListener("activate", (event) => {
 //     const notificationTitle = payload.notification.title;
 //     const notificationOptions = {
 //         body: payload.notification.body,
-//         icon: payload.notification.icon || "https://res.cloudinary.com/dzqnyehxn/image/upload/v1739170705/notification-badge_p0oafv.png",
+//         icon: payload.notification.icon || "https://res.cloudinary.com/dzqnyehxn/image/upload/v1739858070/belll_fes617.png",
 //     };
 
 //     self.registration.showNotification(notificationTitle, notificationOptions);
@@ -99,8 +99,8 @@ messaging.onBackgroundMessage(async (payload) => {
     const notificationTitle = payload.data?.title || "🔔 הודעה חדשה";
     const notificationOptions = {
         body: payload.data?.body || "📩 יש לך הודעה חדשה!",
-        icon: payload.data?.icon || "https://res.cloudinary.com/dzqnyehxn/image/upload/v1739170705/notification-badge_p0oafv.png",
-        badge: payload.data?.badge || "https://res.cloudinary.com/dzqnyehxn/image/upload/v1739170705/notification-badge_p0oafv.png",
+        icon: payload.data?.icon || "https://res.cloudinary.com/dzqnyehxn/image/upload/v1739858070/belll_fes617.png",
+        badge: payload.data?.badge || "https://res.cloudinary.com/dzqnyehxn/image/upload/v1739858070/belll_fes617.png",
         vibrate: [200, 100, 200],
         requireInteraction: true,
         data: payload.data
@@ -163,7 +163,7 @@ self.addEventListener("push", async function (event) {
 
     const options = {
         body: notificationData.body || "יש לך הודעה חדשה",
-        icon: notificationData.icon || "https://res.cloudinary.com/dzqnyehxn/image/upload/v1739170705/notification-badge_p0oafv.png",
+        icon: notificationData.icon || "https://res.cloudinary.com/dzqnyehxn/image/upload/v1739858070/belll_fes617.png",
         vibrate: [200, 100, 200],
         requireInteraction: true,
         priority: "high",

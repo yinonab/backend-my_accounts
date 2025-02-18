@@ -129,7 +129,7 @@ async function sendNotification(userId, payload) {
             icon: payload.icon ? 'PRESENT' : 'MISSING'
         }
     });
-    const defaultIcon = "https://res.cloudinary.com/dzqnyehxn/image/upload/v1739170705/notification-badge_p0oafv.png";
+    const defaultIcon = "https://res.cloudinary.com/dzqnyehxn/image/upload/v1739858070/belll_fes617.png";
     payload.icon = payload.icon || defaultIcon;
     payload.badge = payload.badge || defaultIcon;
     console.log('Attempting to send notification:', {
@@ -156,8 +156,8 @@ async function sendNotification(userId, payload) {
             data: {
                 title: payload.title,
                 body: payload.body,
-                icon: "https://res.cloudinary.com/dzqnyehxn/image/upload/v1739170705/notification-badge_p0oafv.png",
-                badge: "https://res.cloudinary.com/dzqnyehxn/image/upload/v1739170705/notification-badge_p0oafv.png",
+                icon: "https://res.cloudinary.com/dzqnyehxn/image/upload/v1739858070/belll_fes617.png",
+                badge: "https://res.cloudinary.com/dzqnyehxn/image/upload/v1739858070/belll_fes617.png",
                 sound: "default",
                 wakeUpApp: String(payload.wakeUpApp ?? true)
 
@@ -168,8 +168,8 @@ async function sendNotification(userId, payload) {
                 data: {
                     title: payload.title,
                     body: payload.body,
-                    icon: "https://res.cloudinary.com/dzqnyehxn/image/upload/v1739170705/notification-badge_p0oafv.png",
-                    badge: "https://res.cloudinary.com/dzqnyehxn/image/upload/v1739170705/notification-badge_p0oafv.png",
+                    icon: "https://res.cloudinary.com/dzqnyehxn/image/upload/v1739858070/belll_fes617.png",
+                    badge: "https://res.cloudinary.com/dzqnyehxn/image/upload/v1739858070/belll_fes617.png",
                     sound: "default",
                     wakeUpApp: String(payload.wakeUpApp ?? true)
 
