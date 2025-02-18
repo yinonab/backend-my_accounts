@@ -194,27 +194,53 @@ async function sendNotification(userId, payload) {
         console.log("✅ Notification sent successfully:", response);
     } catch (err) {
         console.error("❌ Failed to send Firebase notification:", err);
+
+        // 🛑 אם השגיאה היא שהטוקן לא תקף, נמחק אותו מהדאטה בייס
+        if (err.code === 'messaging/registration-token-not-registered') {
+            console.warn(`🗑️ Token is no longer valid. Removing for user: ${userId}`);
+            await removeSubscription(userId);
+        }
+
         throw err;
     }
 }
 
+// async function removeSubscription(userId) {
+//     console.log(`🗑️ Attempting to remove subscription for user: ${userId}`);
+//     try {
+//         const collection = await dbService.getCollection(COLLECTION_NAME);
+//         const deleteResult = await collection.deleteOne({ userId });
+//         console.log('✅ Subscription removal result:', {
+//             userId,
+//             deletedCount: deleteResult.deletedCount
+//         });
+
+//         logger.info(`Removed subscription for user: ${userId}`);
+//     } catch (err) {
+//         console.error('❌ Failed to remove subscription:', err);
+//         logger.error('Failed to remove subscription', err);
+//         throw err;
+//     }
+// }
 async function removeSubscription(userId) {
-    console.log(`🗑️ Attempting to remove subscription for user: ${userId}`);
+    console.log(`🗑️ Removing subscription for user: ${userId}`);
+
     try {
         const collection = await dbService.getCollection(COLLECTION_NAME);
-        const deleteResult = await collection.deleteOne({ userId });
+        const deleteResult = await collection.updateOne({ userId }, { $unset: { token: "" } });
+
         console.log('✅ Subscription removal result:', {
             userId,
-            deletedCount: deleteResult.deletedCount
+            modifiedCount: deleteResult.modifiedCount
         });
 
-        logger.info(`Removed subscription for user: ${userId}`);
+        logger.info(`Removed invalid FCM token for user: ${userId}`);
     } catch (err) {
         console.error('❌ Failed to remove subscription:', err);
-        logger.error('Failed to remove subscription', err);
         throw err;
     }
 }
+
 
 
 
