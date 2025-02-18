@@ -6,9 +6,11 @@
     "display": "standalone",
     "start_url": "/index.html",
     "scope": "/",
+    "orientation": "portrait",
+    "prefer_related_applications": false,
     "icons": [
         {
-            "src": "https://res.cloudinary.com/dzqnyehxn/image/upload/v1739337559/video-chat_brgqz0.png",
+            "src": "https://res.cloudinary.com/dzqnyehxn/image/upload/v1739900589/video-chat_brgqz0_1_ubytvq.png",
             "sizes": "72x72",
             "type": "image/png"
         },
@@ -24,5 +26,19 @@
         }
     ],
     "gcm_sender_id": "988437566016",
-    "gcm_sender_id_comment": "Firebase Cloud Messaging Sender ID"
+    "gcm_sender_id_comment": "Firebase Cloud Messaging Sender ID",
+    "screenshots": [
+        {
+            "src": "https://res.cloudinary.com/dzqnyehxn/image/upload/v1739900276/for_desktop_ub7bmr.png",
+            "sizes": "1892x982",
+            "type": "image/png",
+            "form_factor": "wide"
+        },
+        {
+            "src": "https://res.cloudinary.com/dzqnyehxn/image/upload/v1739900275/for_mobile_al90kz.png",
+            "sizes": "345x775",
+            "type": "image/png",
+            "form_factor": "narrow"
+        }
+    ]
 }
