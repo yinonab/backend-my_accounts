@@ -110,50 +110,64 @@ export function setupSocketAPI(http) {
         })
         socket.on('chat-send-msg', msg => {
             if (!socket.userId) {
-                logger.warn(`Unauthorized message attempt from socket [id: ${socket.id}]`);
+                logger.warn(`⚠️ Unauthorized message attempt from socket [id: ${socket.id}] - User not logged in.`);
                 return;
             }
 
-            // Add username to the message object
+            // יצירת אובייקט הודעה
             const message = {
                 sender: socket.userId,
-                senderName: socket.username, // Add username
-                text: msg.text
+                senderName: socket.username || 'Unknown User', // אם אין שם משתמש
+                text: msg.text || '', // אם אין טקסט, נשלח מחרוזת ריקה
+                imageUrl: msg.imageUrl || undefined // אם אין תמונה, נשאיר `undefined`
             };
 
-            logger.info(`New chat msg from user [id: ${socket.userId}, name: ${socket.username}], emitting to topic ${socket.myTopic}`);
+            logger.info(`📢 Group message received: 
+            📤 From: ${socket.userId} (${socket.username || 'Unknown'}) 
+            🏷️ Room: ${socket.myTopic || 'No Room'} 
+            📝 Text: "${msg.text || 'No text'}" 
+            🖼️ Image: ${msg.imageUrl ? 'Yes' : 'No'}`);
+
             gIo.to(socket.myTopic).emit('chat-add-msg', message);
         });
 
         // ✅ האזנה להודעות פרטיות
         socket.on('chat-send-private-msg', async (data) => {
-            const { toUserId, text } = data;
+            const { toUserId, text, imageUrl } = data;
 
             if (!socket.userId || !socket.username) {
-                logger.warn(`❌ Unauthorized private message attempt from socket [id: ${socket.id}]`);
+                logger.warn(`❌ Unauthorized private message attempt from socket [id: ${socket.id}] - Missing user authentication.`);
                 return;
             }
 
-            if (!toUserId || !text) {
-                logger.warn(`⚠️ Missing recipient or message text: { toUserId: ${toUserId}, text: ${text} }`);
+            if (!toUserId || (!text && !imageUrl)) {
+                logger.warn(`⚠️ Missing recipient or message content: 
+                🏷️ To User ID: ${toUserId} 
+                📝 Text: "${text || 'No text'}" 
+                🖼️ Image: ${imageUrl ? 'Yes' : 'No'}`);
                 return;
             }
 
-            // יצירת אובייקט ההודעה עם שם השולח
+            // יצירת אובייקט הודעה פרטית
             const privateMessage = {
                 sender: socket.userId,
-                senderName: socket.username, // הוספת שם המשתמש
-                text: text
+                senderName: socket.username,
+                text: text || '', // אם אין טקסט, נשלח מחרוזת ריקה
+                imageUrl: imageUrl || undefined // אם אין תמונה, נשאיר `undefined`
             };
 
-            logger.info(`📩 Private message received: { from: ${socket.userId}, to: ${toUserId}, text: ${text} }`);
+            logger.info(`📩 Private message received: 
+            📤 From: ${socket.userId} (${socket.username}) 
+            📬 To: ${toUserId} 
+            📝 Text: "${text || 'No text'}" 
+            🖼️ Image: ${imageUrl ? 'Yes' : 'No'}`);
 
             const targetSocket = _getUserSocket(toUserId);
             if (targetSocket) {
                 targetSocket.emit('chat-add-private-msg', privateMessage);
-                logger.info(`✅ Private message successfully sent to ${toUserId}`);
+                logger.info(`✅ Private message successfully sent to ${toUserId} (${socket.username})`);
             } else {
-                logger.warn(`⚠️ No active socket found for recipient ${toUserId}`);
+                logger.warn(`⚠️ No active socket found for recipient ${toUserId}. Message could not be delivered.`);
             }
         });
 
