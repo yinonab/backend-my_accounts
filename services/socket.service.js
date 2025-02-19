@@ -97,6 +97,28 @@ export function setupSocketAPI(http) {
                 socket.emit('request-user-data');
             }
         });
+        socket.on('typing', (data) => {
+            const { toUserId, messageType } = data;
+            if (!socket.userId || !toUserId || !messageType) return;
+
+            const targetSocket = _getUserSocket(toUserId);
+            if (targetSocket) {
+                targetSocket.emit('user-typing', {
+                    fromUserId: socket.userId,
+                    messageType
+                });
+            }
+        });
+
+        socket.on('stop-typing', (data) => {
+            const { toUserId } = data;
+            if (!socket.userId || !toUserId) return;
+
+            const targetSocket = _getUserSocket(toUserId);
+            if (targetSocket) {
+                targetSocket.emit('user-stop-typing', { fromUserId: socket.userId });
+            }
+        });
 
 
         socket.on('chat-set-topic', topic => {
