@@ -119,57 +119,71 @@ export function setupSocketAPI(http) {
                 sender: socket.userId,
                 senderName: socket.username || 'Unknown User', // אם אין שם משתמש
                 text: msg.text || '', // אם אין טקסט, נשלח מחרוזת ריקה
-                imageUrl: msg.imageUrl || undefined // אם אין תמונה, נשאיר `undefined`
+                imageUrl: msg.imageUrl || undefined, // אם אין תמונה, נשאיר `undefined`
+                videoUrl: msg.videoUrl || undefined,
             };
 
-            logger.info(`📢 Group message received: 
-            📤 From: ${socket.userId} (${socket.username || 'Unknown'}) 
-            🏷️ Room: ${socket.myTopic || 'No Room'} 
-            📝 Text: "${msg.text || 'No text'}" 
-            🖼️ Image: ${msg.imageUrl ? 'Yes' : 'No'}`);
+            logger.info(`📢 קיבלנו הודעה חדשה מהמשתמש: 
+                🆔 UserID: ${socket.userId}
+                🏷️ Room: ${socket.myTopic || 'No Room'}
+                📝 Text: "${msg.text || 'No text'}"
+                🖼️ Image: ${msg.imageUrl ? msg.imageUrl : 'No Image'}
+                🎥 Video: ${msg.videoUrl ? msg.videoUrl : 'No Video'}`);
+
 
             gIo.to(socket.myTopic).emit('chat-add-msg', message);
         });
 
         // ✅ האזנה להודעות פרטיות
         socket.on('chat-send-private-msg', async (data) => {
-            const { toUserId, text, imageUrl } = data;
+            logger.info(`📩 chat-send-private-msg received:`, data);
+            const { toUserId, text, imageUrl, videoUrl } = data;  // ✅ עכשיו גם videoUrl
 
             if (!socket.userId || !socket.username) {
                 logger.warn(`❌ Unauthorized private message attempt from socket [id: ${socket.id}] - Missing user authentication.`);
                 return;
             }
 
-            if (!toUserId || (!text && !imageUrl)) {
+            if (!toUserId || (text === undefined && imageUrl === undefined && videoUrl === undefined)) {
                 logger.warn(`⚠️ Missing recipient or message content: 
                 🏷️ To User ID: ${toUserId} 
                 📝 Text: "${text || 'No text'}" 
-                🖼️ Image: ${imageUrl ? 'Yes' : 'No'}`);
+                🖼️ Image: ${imageUrl ? 'Yes' : 'No'}"
+                🎥 Video: ${videoUrl ? 'Yes' : 'No'}"`);
                 return;
             }
 
-            // יצירת אובייקט הודעה פרטית
+
             const privateMessage = {
                 sender: socket.userId,
                 senderName: socket.username,
-                text: text || '', // אם אין טקסט, נשלח מחרוזת ריקה
-                imageUrl: imageUrl || undefined // אם אין תמונה, נשאיר `undefined`
+                text: text || '',
+                imageUrl: imageUrl || undefined,
+                videoUrl: videoUrl || undefined,  // ✅ הוספת וידאו
+                toUserId: toUserId
             };
 
-            logger.info(`📩 Private message received: 
-            📤 From: ${socket.userId} (${socket.username}) 
-            📬 To: ${toUserId} 
-            📝 Text: "${text || 'No text'}" 
-            🖼️ Image: ${imageUrl ? 'Yes' : 'No'}`);
+            logger.info(`📩 Private message received:
+            📤 From: ${socket.userId} (${socket.username})
+            📬 To: ${toUserId}
+            📝 Text: "${text || 'No text'}"
+            🖼️ Image: ${imageUrl ? 'Yes' : 'No'}"
+            🎥 Video: ${videoUrl ? 'Yes' : 'No'}"`);
 
             const targetSocket = _getUserSocket(toUserId);
+
             if (targetSocket) {
+                logger.info(`🚀 Sending private message to: ${toUserId} socketId: ${targetSocket.id}`);
+                logger.info(`🚀 Sending private message to: ${privateMessage} socketId: ${privateMessage}`);
                 targetSocket.emit('chat-add-private-msg', privateMessage);
-                logger.info(`✅ Private message successfully sent to ${toUserId} (${socket.username})`);
+                logger.info(`✅ Private message successfully sent to ${toUserId} - ${JSON.stringify(privateMessage)}`);
             } else {
                 logger.warn(`⚠️ No active socket found for recipient ${toUserId}. Message could not be delivered.`);
             }
         });
+
+
+
 
 
 
