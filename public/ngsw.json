@@ -1,6 +1,6 @@
 {
   "configVersion": 1,
-  "timestamp": 1739944279795,
+  "timestamp": 1739946897931,
   "index": "/index.html",
   "assetGroups": [
     {
@@ -14,7 +14,7 @@
         "/favicon.ico",
         "/firebase-messaging-sw.js",
         "/index.html",
-        "/main-AQAMXEKM.js",
+        "/main-CZRA5A56.js",
         "/manifest.webmanifest",
         "/polyfills-FFHMD2TL.js",
         "/styles-YSWAHAIC.css",
@@ -147,8 +147,8 @@
     "/assets/images/video-chat.png": "979c9d4d1da30b74fab18375975d7e26f4e5559c",
     "/favicon.ico": "9c39f434fe1261f68c5e3eefdf734630d99c5670",
     "/firebase-messaging-sw.js": "1fe81c98af4da5da5bb7ccbca94d95e7dfe46e5f",
-    "/index.html": "50683599053ad012dd6d8f08adf72e10f2e9f303",
-    "/main-AQAMXEKM.js": "eaf778e77c70b5e6c304a846fb5da72efca3364a",
+    "/index.html": "a4428804da7b9f7fb76e5f8c15f8a52b1149ad21",
+    "/main-CZRA5A56.js": "8b0111d3e1e75bc50fcdcbb3a37c5bff13351ed8",
     "/manifest.webmanifest": "7f67f934ad486dfc4d19a893f3ed8f5657b2ee6b",
     "/polyfills-FFHMD2TL.js": "f49b49a155bc7d192db62a4c15d0a612b460a667",
     "/styles-YSWAHAIC.css": "eb4ac7e8c0e6b5b083fd0aeb3de5c382b3691659",
