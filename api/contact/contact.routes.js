@@ -3,7 +3,7 @@ import express from 'express'
 import { requireAuth } from '../../middlewares/requireAuth.middleware.js'
 import { log } from '../../middlewares/logger.middleware.js'
 
-import { getContacts, getContactById, addContact, updateContact, removeContact, addContactMsg, removeContactMsg } from './contact.controller.js'
+import { getContacts, getContactById, addContact, updateContact, removeContact, addContactMsg, removeContactMsg, getAllContacts } from './contact.controller.js'
 
 const router = express.Router()
 
@@ -11,6 +11,7 @@ const router = express.Router()
 // router.use(requireAuth)
 
 router.get('/', log, requireAuth, getContacts)
+router.get('/All', log, getAllContacts)
 router.get('/:id', log, getContactById)
 router.post('/', log, requireAuth, addContact)
 router.put('/edit/:id', requireAuth, updateContact)

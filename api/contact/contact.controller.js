@@ -17,6 +17,24 @@ export async function getContacts(req, res) {
 		res.status(400).send({ err: 'Failed to get contacts' })
 	}
 }
+export async function getAllContacts(req, res) {
+	try {
+		// const filterBy = {
+		// 	txt: req.query.txt || '',
+		// 	// minSpeed: +req.query.minSpeed || 0,
+		// 	// sortField: req.query.sortField || '',
+		// 	// sortDir: req.query.sortDir || 1,
+		// 	// pageIdx: req.query.pageIdx,
+		// }
+		console.log('!!!!!!!!!!!!!!!!!!!!!!!!!!getAllContacts!!!!!!!!!!!!!!!!!!!!!');
+		const contacts = await contactService.getAllContacts()
+		console.log('📤 Sending contacts to frontend:', JSON.stringify(contacts, null, 2));
+		res.json(contacts)
+	} catch (err) {
+		logger.error('Failed to get contacts', err)
+		res.status(400).send({ err: 'Failed to get contacts' })
+	}
+}
 
 export async function getContactById(req, res) {
 	try {

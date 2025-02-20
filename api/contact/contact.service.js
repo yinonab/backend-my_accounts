@@ -16,7 +16,23 @@ export const contactService = {
 	update,
 	addContactMsg,
 	removeContactMsg,
+	getAllContacts,
 }
+async function getAllContacts() {
+	try {
+		console.log("📡 Fetching ALL contacts (no filters)...");
+
+		const collection = await dbService.getCollection('contact');
+		const contacts = await collection.find({}).toArray(); // ✅ מחזיר את כל הקונטקטים
+
+		console.log("📥 All Contacts:", contacts);
+		return contacts;
+	} catch (err) {
+		logger.error("❌ Failed to fetch all contacts", err);
+		throw err;
+	}
+}
+
 
 async function query(filterBy = { txt: '' }, loggedinUser) {
 	try {
