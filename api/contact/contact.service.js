@@ -56,13 +56,13 @@ async function query(filterBy = { txt: '' }, loggedinUser) {
 			const demoContact = {
 				_id: new ObjectId(), // Generate a new ObjectId for the demo contact
 				name: `First Contact of ${loggedinUser.name}`, // Dynamically include the logged-in user's name
-				phone: '123-456-7890',
-				email: 'demo@contact.com',
-				createdAt: new Date(),
+				// phone: '123-456-7890',
+				// email: 'demo@contact.com',
+				// createdAt: new Date(),
 				owner: {
 					_id: loggedinUser._id,
 				},
-				msgs: [],
+				// msgs: [],
 			};
 
 			await collection.insertOne(demoContact);
