@@ -1,6 +1,6 @@
 {
   "configVersion": 1,
-  "timestamp": 1740374838899,
+  "timestamp": 1740383323458,
   "index": "/index.html",
   "assetGroups": [
     {
@@ -14,7 +14,7 @@
         "/favicon.ico",
         "/firebase-messaging-sw.js",
         "/index.html",
-        "/main-EM6I3SIG.js",
+        "/main-HDOKU4XR.js",
         "/manifest.webmanifest",
         "/polyfills-FFHMD2TL.js",
         "/styles-3UXCCGYK.css",
@@ -66,11 +66,13 @@
         "/assets/images/keith-misner-h0Vxgz5tyXA-unsplash.jpg",
         "/assets/images/logo.png",
         "/assets/images/notification-badge.png",
+        "/assets/images/picture.png",
         "/assets/images/plus.png",
         "/assets/images/speak.png",
         "/assets/images/teamwork.png",
         "/assets/images/users.png",
-        "/assets/images/video-chat.png"
+        "/assets/images/video-chat.png",
+        "/assets/images/video.png"
       ],
       "patterns": []
     }
@@ -142,15 +144,17 @@
     "/assets/images/keith-misner-h0Vxgz5tyXA-unsplash.jpg": "0784414d8103f4ba370c5e9155f17cd29f58702a",
     "/assets/images/logo.png": "f2e3c72421dba14abc3d3e5f47527a8871845a85",
     "/assets/images/notification-badge.png": "a2115eafff4b7aeb51e83a3437b8644b1a75d027",
+    "/assets/images/picture.png": "2e37a1020563aa528471da7425b8e58343e2baf7",
     "/assets/images/plus.png": "1142932a8b622c94aa994a57bc5714cf6fbeeafb",
     "/assets/images/speak.png": "a11cac198910ba75ea42b3d1cfc4718e9fcdacd8",
     "/assets/images/teamwork.png": "c5f72e296b566e7aba2d433f2861fb3a5f74b54a",
     "/assets/images/users.png": "2abfa4c086a43de978616aeffcc77b8063cc08af",
     "/assets/images/video-chat.png": "979c9d4d1da30b74fab18375975d7e26f4e5559c",
+    "/assets/images/video.png": "3285be4989b943072bf77c360bdc3f4874922119",
     "/favicon.ico": "9c39f434fe1261f68c5e3eefdf734630d99c5670",
     "/firebase-messaging-sw.js": "1fe81c98af4da5da5bb7ccbca94d95e7dfe46e5f",
-    "/index.html": "bcdfa5d80ab242d704af21e6d4274397f34a4207",
-    "/main-EM6I3SIG.js": "0ed797c04e82d6cd587bdcdde192bb6625cc5945",
+    "/index.html": "e8272b0d47d3ff79d1e9287e9cd2d9efce6171a1",
+    "/main-HDOKU4XR.js": "91733adb2c7ad51c9f3473fc9472f744541b44d9",
     "/manifest.webmanifest": "7f67f934ad486dfc4d19a893f3ed8f5657b2ee6b",
     "/polyfills-FFHMD2TL.js": "f49b49a155bc7d192db62a4c15d0a612b460a667",
     "/styles-3UXCCGYK.css": "480314a02344369ef12318c8b7b6429887244ec3",
