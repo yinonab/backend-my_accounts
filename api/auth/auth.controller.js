@@ -64,7 +64,7 @@ export async function facebookLogin(req, res) {
 		// Return the user object (without sensitive data) 
 		// Just like your normal login
 		// Or return { user, token } if you prefer
-		res.status(200).json(user)
+		res.status(200).json({ user, loginToken });
 	} catch (err) {
 		logger.error('Failed to handle Facebook login:', err.message)
 		res.status(401).send({ err: 'Failed to handle Facebook login' })
