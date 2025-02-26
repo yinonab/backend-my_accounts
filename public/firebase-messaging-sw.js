@@ -95,6 +95,20 @@ self.addEventListener("activate", (event) => {
 messaging.onBackgroundMessage(async (payload) => {
     console.log('📩 [Firebase Messaging SW] Received background message:', payload);
 
+    // ✅ תמיד שולחים הודעת WAKE_UP לכל הלקוחות הפתוחים
+    if (payload.data?.wakeUpApp) {
+        console.log("📲 Sending WAKE_UP message to clients");
+        self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clients) => {
+            clients.forEach(client => client.postMessage({ type: "WAKE_UP" }));
+        });
+    }
+
+    // 🔇 **אם זו הודעת keep-alive, לא מציגים נוטיפיקציה**
+    if (payload.data?.type === "keep-alive") {
+        console.log("🔕 Silent Keep-Alive message received - keeping app awake.");
+        return; // ✅ מסיים כאן כדי שלא תוצג נוטיפיקציה
+    }
+
     // ⚠️ לא משתמשים ב-payload.notification, אלא רק ב-payload.data
     const notificationTitle = payload.data?.title || "🔔 הודעה חדשה";
     const notificationOptions = {
@@ -105,6 +119,8 @@ messaging.onBackgroundMessage(async (payload) => {
         requireInteraction: true,
         data: payload.data
     };
+    console.log("📩 [Service Worker] Full payload received:", JSON.stringify(payload, null, 2));
+    console.log("📩 [Service Worker] Full notification data:", JSON.stringify(payload.data, null, 2));
 
     console.log("📲 מציג התראה:", notificationTitle, notificationOptions);
     self.registration.showNotification(notificationTitle, notificationOptions);
@@ -161,6 +177,13 @@ self.addEventListener("push", async function (event) {
         return; // אם ה-Token לא תואם למשתמש הנוכחי – אל תציג נוטיפיקציה
     }
 
+    if (notificationData.wakeUpApp) {
+        console.log("📲 Sending WAKE_UP message to clients");
+        self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clients) => {
+            clients.forEach(client => client.postMessage({ type: "WAKE_UP" }));
+        });
+    }
+
     const options = {
         body: notificationData.body || "יש לך הודעה חדשה",
         icon: notificationData.icon || "https://res.cloudinary.com/dzqnyehxn/image/upload/v1739858070/belll_fes617.png",
@@ -169,6 +192,7 @@ self.addEventListener("push", async function (event) {
         priority: "high",
         data: notificationData
     };
+    console.log("🔔 [Push Event] Full notification data:", JSON.stringify(notificationData, null, 2));
 
     console.log("📲 מציג התראה:", notificationData.title, options);
     event.waitUntil(self.registration.showNotification(notificationData.title, options));
