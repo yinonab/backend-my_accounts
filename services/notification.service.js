@@ -159,7 +159,8 @@ async function sendNotification(userId, payload) {
                 icon: "https://res.cloudinary.com/dzqnyehxn/image/upload/v1739858070/belll_fes617.png",
                 badge: "https://res.cloudinary.com/dzqnyehxn/image/upload/v1739858070/belll_fes617.png",
                 sound: "default",
-                wakeUpApp: String(payload.wakeUpApp ?? true)
+                wakeUpApp: String(payload.wakeUpApp ?? true),
+                type: payload.type
 
 
             },
@@ -171,7 +172,8 @@ async function sendNotification(userId, payload) {
                     icon: "https://res.cloudinary.com/dzqnyehxn/image/upload/v1739858070/belll_fes617.png",
                     badge: "https://res.cloudinary.com/dzqnyehxn/image/upload/v1739858070/belll_fes617.png",
                     sound: "default",
-                    wakeUpApp: String(payload.wakeUpApp ?? true)
+                    wakeUpApp: String(payload.wakeUpApp ?? true),
+                    type: payload.type
 
 
                 },

@@ -87,7 +87,7 @@ router.get('/get-subscription', requireAuth, async (req, res) => {
 router.post('/send', log, requireAuth, async (req, res) => {
     try {
         const userId = req.loggedinUser._id;
-        const { title, body, token } = req.body;
+        const { title, body, token, type } = req.body;
         //  console.log("📩 Notification send request received:", { userId, payload });
         console.log('Extracted userId from token:', req.loggedinUser._id);
         console.log('🚀 Preparing to send notification');
@@ -95,12 +95,13 @@ router.post('/send', log, requireAuth, async (req, res) => {
         console.log('📨 Payload Received:', title);
         console.log('📨 Payload Received:', body);
         console.log('📨 Payload Received:', token);
+        console.log('📨 Payload Received:', type);
 
         if (!title || !body) {
             return res.status(400).json({ error: "Title and body are required" });
         }
         console.log("🚀 Sending notification to user:", userId);
-        await notificationService.sendNotification(userId, { title, body, token });
+        await notificationService.sendNotification(userId, { title, body, token, type });
 
         res.status(200).json({ message: "Notification sent successfully" });
     } catch (err) {
