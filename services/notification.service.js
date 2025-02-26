@@ -154,28 +154,28 @@ async function sendNotification(userId, payload) {
 
         const message = {
             data: {
-                title: payload.title,
-                body: payload.body,
+                title: String(payload.title),
+                body: String(payload.body),
                 icon: "https://res.cloudinary.com/dzqnyehxn/image/upload/v1739858070/belll_fes617.png",
                 badge: "https://res.cloudinary.com/dzqnyehxn/image/upload/v1739858070/belll_fes617.png",
                 sound: "default",
-                wakeUpApp: String(payload.wakeUpApp ?? true),
-                type: payload.type
-
-
+                wakeUpApp: String(payload.wakeUpApp ?? true), // ✅ המרה למחרוזת
+                type: String(payload.type ?? "regular"), // ✅ המרה למחרוזת
+                silent: String(payload.silent ?? false), // ✅ המרה למחרוזת
+                requireInteraction: String(payload.requireInteraction ?? false) // ✅ המרה למחרוזת
             },
             android: {
                 priority: "high",
                 data: {
-                    title: payload.title,
-                    body: payload.body,
+                    title: String(payload.title),
+                    body: String(payload.body),
                     icon: "https://res.cloudinary.com/dzqnyehxn/image/upload/v1739858070/belll_fes617.png",
                     badge: "https://res.cloudinary.com/dzqnyehxn/image/upload/v1739858070/belll_fes617.png",
                     sound: "default",
                     wakeUpApp: String(payload.wakeUpApp ?? true),
-                    type: payload.type
-
-
+                    type: String(payload.type ?? "regular"),
+                    silent: String(payload.silent ?? false),
+                    requireInteraction: String(payload.requireInteraction ?? false)
                 },
             },
             apns: {
@@ -187,6 +187,7 @@ async function sendNotification(userId, payload) {
             },
             token: userSubscription.token,
         };
+
 
 
         console.log("📨 Sending FCM message:", message);
