@@ -86,6 +86,8 @@ router.get('/get-subscription', requireAuth, async (req, res) => {
 // });
 router.post('/send', log, requireAuth, async (req, res) => {
     try {
+        console.log("📩 Full request body received:", JSON.stringify(req.body, null, 2));
+
         const userId = req.loggedinUser._id;
         const { title, body, token, type } = req.body;
         //  console.log("📩 Notification send request received:", { userId, payload });
