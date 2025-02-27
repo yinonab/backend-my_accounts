@@ -156,7 +156,7 @@ async function sendNotification(userId, payload) {
             data: {
                 title: String(payload.title),
                 body: String(payload.body),
-                icon: "https://res.cloudinary.com/dzqnyehxn/image/upload/v1739858070/belll_fes617.png",
+                icon: String(payload.imageUrl) || "https://res.cloudinary.com/dzqnyehxn/image/upload/v1739858070/belll_fes617.png",
                 badge: "https://res.cloudinary.com/dzqnyehxn/image/upload/v1739858070/belll_fes617.png",
                 sound: "default",
                 wakeUpApp: String(payload.wakeUpApp ?? true), // ✅ המרה למחרוזת
@@ -169,7 +169,7 @@ async function sendNotification(userId, payload) {
                 data: {
                     title: String(payload.title),
                     body: String(payload.body),
-                    icon: "https://res.cloudinary.com/dzqnyehxn/image/upload/v1739858070/belll_fes617.png",
+                    icon: String(payload.imageUrl) || "https://res.cloudinary.com/dzqnyehxn/image/upload/v1739858070/belll_fes617.png",
                     badge: "https://res.cloudinary.com/dzqnyehxn/image/upload/v1739858070/belll_fes617.png",
                     sound: "default",
                     wakeUpApp: String(payload.wakeUpApp ?? true),
