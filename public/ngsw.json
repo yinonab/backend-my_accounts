@@ -1,6 +1,6 @@
 {
   "configVersion": 1,
-  "timestamp": 1740639680450,
+  "timestamp": 1740858574007,
   "index": "/index.html",
   "assetGroups": [
     {
@@ -14,7 +14,7 @@
         "/favicon.ico",
         "/firebase-messaging-sw.js",
         "/index.html",
-        "/main-VQ43OUAF.js",
+        "/main-HQYA5NSE.js",
         "/manifest.webmanifest",
         "/polyfills-FFHMD2TL.js",
         "/styles-X6JREX72.css",
@@ -48,6 +48,7 @@
         "/assets/images/arrow-down1.png",
         "/assets/images/arrow-up.png",
         "/assets/images/back.png",
+        "/assets/images/backB.png",
         "/assets/images/bitcoin.png",
         "/assets/images/chat.png",
         "/assets/images/coins.png",
@@ -126,6 +127,7 @@
     "/assets/images/arrow-down1.png": "187da77cc67d15c276a6c04e83501d525b0f587b",
     "/assets/images/arrow-up.png": "cd0fd49ac6001877e968fc2ecd52aa9773b58102",
     "/assets/images/back.png": "593365f6052d4fd2962a522a1e9e261a03f69f80",
+    "/assets/images/backB.png": "fc6354dce48d97e64d14f4b18ffd658b1afb64ef",
     "/assets/images/bitcoin.png": "eb934ca7e5476aedcf9114639a8c453ea0fd2f9f",
     "/assets/images/chat.png": "1d2930c17b923332ec2439db992a81161391b031",
     "/assets/images/coins.png": "1edd2a1072f1ca9ebd9bcfbe9433a89b7921492b",
@@ -153,8 +155,8 @@
     "/assets/images/video.png": "3285be4989b943072bf77c360bdc3f4874922119",
     "/favicon.ico": "9c39f434fe1261f68c5e3eefdf734630d99c5670",
     "/firebase-messaging-sw.js": "45dd6f8c0771a253ee13d6811d2560aab8b96522",
-    "/index.html": "95759a1b6d5452bc0db3600eaed680d01777a9e2",
-    "/main-VQ43OUAF.js": "b65bc2f720bcc7e52f5f9e1ce0825e0577ceb920",
+    "/index.html": "184f261b920aa908442fadbd99b2b1783a3c6cad",
+    "/main-HQYA5NSE.js": "c7188df1260e6d75607145a04965066e6c95ce57",
     "/manifest.webmanifest": "7f67f934ad486dfc4d19a893f3ed8f5657b2ee6b",
     "/polyfills-FFHMD2TL.js": "f49b49a155bc7d192db62a4c15d0a612b460a667",
     "/styles-X6JREX72.css": "955e471a2c0bfeb6761b34955a4210781e66d84d",
