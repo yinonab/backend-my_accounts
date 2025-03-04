@@ -159,7 +159,7 @@ export function setupSocketAPI(http) {
         // ✅ האזנה להודעות פרטיות
         socket.on('chat-send-private-msg', async (data) => {
             logger.info(`📩 chat-send-private-msg received:`, data);
-            const { toUserId, text, imageUrl, videoUrl } = data;  // ✅ עכשיו גם videoUrl
+            const { toUserId, text, imageUrl, videoUrl, tempId } = data;  // ✅ עכשיו גם videoUrl
 
             if (!socket.userId || !socket.username) {
                 logger.warn(`❌ Unauthorized private message attempt from socket [id: ${socket.id}] - Missing user authentication.`);
@@ -182,12 +182,14 @@ export function setupSocketAPI(http) {
                 text: text || '',
                 imageUrl: imageUrl || undefined,
                 videoUrl: videoUrl || undefined,  // ✅ הוספת וידאו
-                toUserId: toUserId
+                toUserId: toUserId,
+                tempId: tempId // העברת ה-tempId ללקוח
             };
 
             logger.info(`📩 Private message received:
             📤 From: ${socket.userId} (${socket.username})
             📬 To: ${toUserId}
+            templetid;${tempId}
             📝 Text: "${text || 'No text'}"
             🖼️ Image: ${imageUrl ? 'Yes' : 'No'}"
             🎥 Video: ${videoUrl ? 'Yes' : 'No'}"`);
