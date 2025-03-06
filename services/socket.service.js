@@ -143,6 +143,7 @@ export function setupSocketAPI(http) {
                 text: msg.text || '', // אם אין טקסט, נשלח מחרוזת ריקה
                 imageUrl: msg.imageUrl || undefined, // אם אין תמונה, נשאיר `undefined`
                 videoUrl: msg.videoUrl || undefined,
+                tempId: tempId
             };
 
             logger.info(`📢 קיבלנו הודעה חדשה מהמשתמש: 
