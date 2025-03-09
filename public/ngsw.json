@@ -1,6 +1,6 @@
 {
   "configVersion": 1,
-  "timestamp": 1741537389546,
+  "timestamp": 1741547687063,
   "index": "/index.html",
   "assetGroups": [
     {
@@ -14,7 +14,7 @@
         "/favicon.ico",
         "/firebase-messaging-sw.js",
         "/index.html",
-        "/main-PSUAARR4.js",
+        "/main-EPHL6MQV.js",
         "/manifest.webmanifest",
         "/polyfills-FFHMD2TL.js",
         "/styles-UFQOIK52.css",
@@ -55,6 +55,7 @@
         "/assets/images/chat.png",
         "/assets/images/coins.png",
         "/assets/images/contact.png",
+        "/assets/images/content.png",
         "/assets/images/delete.png",
         "/assets/images/delete1.png",
         "/assets/images/edit.png",
@@ -149,6 +150,7 @@
     "/assets/images/chat.png": "1d2930c17b923332ec2439db992a81161391b031",
     "/assets/images/coins.png": "1edd2a1072f1ca9ebd9bcfbe9433a89b7921492b",
     "/assets/images/contact.png": "b8a1bc9750432ee08f94760a5739f97d08c4e33a",
+    "/assets/images/content.png": "7c580dd5d700dfaf1aac1c1ca0cdd0b2f2f545ee",
     "/assets/images/delete.png": "c02286a33585eee171e1da21cd6cd369667dca92",
     "/assets/images/delete1.png": "6150236ddb0f320898eea6c4303732aa0fce829f",
     "/assets/images/edit.png": "d8be2389e1f530d2e20f9ce43f7cf1e774ebf077",
@@ -185,8 +187,8 @@
     "/assets/images/video.png": "3285be4989b943072bf77c360bdc3f4874922119",
     "/favicon.ico": "9c39f434fe1261f68c5e3eefdf734630d99c5670",
     "/firebase-messaging-sw.js": "45dd6f8c0771a253ee13d6811d2560aab8b96522",
-    "/index.html": "1e228bf23ac1e8a6de7d3a8fc7c8f1b78c5c98ff",
-    "/main-PSUAARR4.js": "bc4938f3f0c8aa1f483e49a09edce288bf6a64e6",
+    "/index.html": "2fd54ede0cd0cf024cad2646a2e4f002113437ab",
+    "/main-EPHL6MQV.js": "900f554781a093ee4ccf013a1bec33ffa52d2acc",
     "/manifest.webmanifest": "7f67f934ad486dfc4d19a893f3ed8f5657b2ee6b",
     "/polyfills-FFHMD2TL.js": "f49b49a155bc7d192db62a4c15d0a612b460a667",
     "/styles-UFQOIK52.css": "778a456bde8e5b3a68782d8c7cd4eb5154726c59",

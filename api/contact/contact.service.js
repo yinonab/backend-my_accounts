@@ -55,7 +55,7 @@ async function query(filterBy = { txt: '' }, loggedinUser) {
 			logger.info('No contacts found, creating a demo contact.');
 			const demoContact = {
 				_id: new ObjectId(), // Generate a new ObjectId for the demo contact
-				name: `First Contact of ${loggedinUser.name}`, // Dynamically include the logged-in user's name
+				name: `First Content of ${loggedinUser.name}`, // Dynamically include the logged-in user's name
 				// phone: '123-456-7890',
 				// email: 'demo@contact.com',
 				// createdAt: new Date(),
