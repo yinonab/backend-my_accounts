@@ -10,6 +10,7 @@ export const userService = {
     remove, // Delete (remove user)
     query, // List (of users)
     getByUsername, // Used for Login
+    getByEmail,
     updateUserProfile,
     getByFacebookId,
     addFacebookUser,
@@ -120,6 +121,16 @@ async function getByUsername(username) {
         return user
     } catch (err) {
         logger.error(`while finding user by username: ${username}`, err)
+        throw err
+    }
+}
+async function getByEmail(email) {
+    try {
+        const collection = await dbService.getCollection('user')
+        const user = await collection.findOne({ email })
+        return user
+    } catch (err) {
+        logger.error(`while finding user by email: ${email}`, err)
         throw err
     }
 }

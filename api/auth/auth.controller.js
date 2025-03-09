@@ -4,10 +4,10 @@ import { userService } from '../user/user.service.js';
 
 export async function login(req, res) {
 	try {
-		const { username, password } = req.body;
+		const { email, password } = req.body;
 
 		// Get user and token from authService
-		const { user, loginToken } = await authService.login(username, password);
+		const { user, loginToken } = await authService.login(email, password);
 
 		logger.info('User login: ', user);
 
