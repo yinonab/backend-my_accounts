@@ -1,6 +1,6 @@
 {
   "configVersion": 1,
-  "timestamp": 1741497161145,
+  "timestamp": 1741514716323,
   "index": "/index.html",
   "assetGroups": [
     {
@@ -14,10 +14,10 @@
         "/favicon.ico",
         "/firebase-messaging-sw.js",
         "/index.html",
-        "/main-JCKJNWYJ.js",
+        "/main-CVYHK72G.js",
         "/manifest.webmanifest",
         "/polyfills-FFHMD2TL.js",
-        "/styles-X6JREX72.css",
+        "/styles-S3BU7Z3T.css",
         "/worker-YK2NRHEU.js"
       ],
       "patterns": []
@@ -51,6 +51,7 @@
         "/assets/images/back.png",
         "/assets/images/backB.png",
         "/assets/images/bitcoin.png",
+        "/assets/images/camera.png",
         "/assets/images/chat.png",
         "/assets/images/coins.png",
         "/assets/images/contact.png",
@@ -131,6 +132,7 @@
     "/assets/images/back.png": "593365f6052d4fd2962a522a1e9e261a03f69f80",
     "/assets/images/backB.png": "fc6354dce48d97e64d14f4b18ffd658b1afb64ef",
     "/assets/images/bitcoin.png": "eb934ca7e5476aedcf9114639a8c453ea0fd2f9f",
+    "/assets/images/camera.png": "77719b57058f22e8254be1a4aef2e2af731e7fc9",
     "/assets/images/chat.png": "1d2930c17b923332ec2439db992a81161391b031",
     "/assets/images/coins.png": "1edd2a1072f1ca9ebd9bcfbe9433a89b7921492b",
     "/assets/images/contact.png": "b8a1bc9750432ee08f94760a5739f97d08c4e33a",
@@ -157,11 +159,11 @@
     "/assets/images/video.png": "3285be4989b943072bf77c360bdc3f4874922119",
     "/favicon.ico": "9c39f434fe1261f68c5e3eefdf734630d99c5670",
     "/firebase-messaging-sw.js": "45dd6f8c0771a253ee13d6811d2560aab8b96522",
-    "/index.html": "8cdf46057a644ef07103044748ab2e8b324f3d6f",
-    "/main-JCKJNWYJ.js": "8ef3cfbdc01ed7c3728ba543ef581924ebde4444",
+    "/index.html": "16c64daa7c5028f0d948c0413155f4d49b9dc724",
+    "/main-CVYHK72G.js": "588ef01658872ef4e528b28842df3139f7c50c37",
     "/manifest.webmanifest": "7f67f934ad486dfc4d19a893f3ed8f5657b2ee6b",
     "/polyfills-FFHMD2TL.js": "f49b49a155bc7d192db62a4c15d0a612b460a667",
-    "/styles-X6JREX72.css": "955e471a2c0bfeb6761b34955a4210781e66d84d",
+    "/styles-S3BU7Z3T.css": "7e583bfb4f7f394152f72f86db597c96d861adef",
     "/worker-YK2NRHEU.js": "c3754b5865531f15fdf9476916127ac63b4bfa7d"
   },
   "navigationUrls": [
