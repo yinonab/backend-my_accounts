@@ -183,14 +183,10 @@ app.post('/api/upload', upload.single('image'), (req, res) => {
     }
 });
 // Start the server
-server.listen(port, () => {
-    console.log(`🌍 Full Config:`, config);
-    console.log(`🌍 API Base URL: ${config.baseURL || '❌ Missing baseURL in config'}`);
-
-    logger.info(`🚀 Server is running on port: ${port}`);
+server.listen(port, '0.0.0.0', () => {
     console.log(`🚀 Server is running on port: ${port}`);
-    console.log(`🌍 API Base URL: ${isProduction ? 'Production' : 'Development'} - ${config.baseURL}`);
 });
+
 
 
 
