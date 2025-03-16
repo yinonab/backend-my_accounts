@@ -63,10 +63,7 @@ function getLoginToken(user) {
 		isAdmin: user.isAdmin,
 		name: user.username,
 	};
-	//return cryptr.encrypt(JSON.stringify(userInfo));
-	const encryptedToken = cryptr.encrypt(JSON.stringify(userInfo));
-	console.log("🔹 Encrypted loginToken:", encryptedToken);
-	return encryptedToken;
+	return cryptr.encrypt(JSON.stringify(userInfo));
 }
 
 function validateToken(loginToken) {
