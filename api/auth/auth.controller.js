@@ -35,10 +35,10 @@ export async function facebookLogin(req, res) {
 
 		// 2. Find if we already have a user with this facebookId or email
 
-		if (!facebookId) {
-			console.warn("❌ Missing facebookId in request!");
-			return res.status(400).json({ error: "facebookId is required" });
-		}
+		// if (!facebookId) {
+		// 	console.warn("❌ Missing facebookId in request!");
+		// 	return res.status(400).json({ error: "facebookId is required" });
+		// }
 		let user = await userService.getByFacebookId(facebookId)
 		console.log("🔹 Found user in DB:", user);
 
@@ -66,10 +66,10 @@ export async function facebookLogin(req, res) {
 		const { loginToken } = await authService.createLoginTokenForUser(user)
 		console.log("🔹 Generated login token:", loginToken);
 
-		if (!loginToken) {
-			console.error("❌ Failed to generate login token!");
-			return res.status(500).json({ error: "Failed to generate login token" });
-		}
+		// if (!loginToken) {
+		// 	console.error("❌ Failed to generate login token!");
+		// 	return res.status(500).json({ error: "Failed to generate login token" });
+		// }
 
 		// 5. Set the cookie
 		res.cookie('loginToken', loginToken, {
