@@ -29,9 +29,16 @@ async function login(email, password) {
 	return { user, loginToken };
 }
 async function createLoginTokenForUser(user) {
+	console.log("🔹 Creating loginToken for user:", user);
+	if (!user._id) {
+		console.error("❌ Missing user._id! Cannot create token.");
+		return { user, loginToken: null };
+	}
 	// basically the same as in signup/login
 	user._id = user._id.toString()
+	console.log("🔹 user._id after conversion:", user._id);
 	const loginToken = getLoginToken(user)
+	console.log("✅ Generated loginToken:", loginToken);
 	return { user, loginToken }
 }
 
@@ -56,7 +63,10 @@ function getLoginToken(user) {
 		isAdmin: user.isAdmin,
 		name: user.username,
 	};
-	return cryptr.encrypt(JSON.stringify(userInfo));
+	//return cryptr.encrypt(JSON.stringify(userInfo));
+	const encryptedToken = cryptr.encrypt(JSON.stringify(userInfo));
+	console.log("🔹 Encrypted loginToken:", encryptedToken);
+	return encryptedToken;
 }
 
 function validateToken(loginToken) {

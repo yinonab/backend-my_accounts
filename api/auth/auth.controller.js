@@ -29,11 +29,23 @@ export async function login(req, res) {
 
 export async function facebookLogin(req, res) {
 	try {
+		console.log("🔹 Received Facebook login request:", req.body);
 		const { facebookId, name, email, accessToken } = req.body
 		// 1. (Optional) verify accessToken with the FB Graph API if you want.
 
 		// 2. Find if we already have a user with this facebookId or email
+
+		if (!facebookId) {
+			console.warn("❌ Missing facebookId in request!");
+			return res.status(400).json({ error: "facebookId is required" });
+		}
 		let user = await userService.getByFacebookId(facebookId)
+		console.log("🔹 Found user in DB:", user);
+
+		if (!user && email) {
+			user = await userService.getByEmail(email);
+			console.log("🔹 Found user by email:", user);
+		}
 		// (You might need to add getByFacebookId to your userService, 
 		//  or do a findOne with { facebookId } or { email })
 
@@ -47,10 +59,17 @@ export async function facebookLogin(req, res) {
 				// so you can store a dummy password or handle differently
 			}
 			user = await userService.addFacebookUser(newUserData)
+			console.log("✅ New user created:", user);
 		}
 
 		// 4. Create an app login token (like in your other login method)
 		const { loginToken } = await authService.createLoginTokenForUser(user)
+		console.log("🔹 Generated login token:", loginToken);
+
+		if (!loginToken) {
+			console.error("❌ Failed to generate login token!");
+			return res.status(500).json({ error: "Failed to generate login token" });
+		}
 
 		// 5. Set the cookie
 		res.cookie('loginToken', loginToken, {
