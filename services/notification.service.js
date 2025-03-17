@@ -162,22 +162,17 @@ async function sendNotification(userId, payload) {
                 icon: payload.icon,
                 wakeUpApp: String(payload.wakeUpApp ?? true),
                 type: String(payload.type ?? "regular"),
-                //silent: String(payload.silent ?? false),
-                requireInteraction: String(payload.requireInteraction ?? false),
-                silent: String(payload.type === "keep-alive"),
+                silent: String(payload.silent ?? false),
+                requireInteraction: String(payload.requireInteraction ?? false)
             },
             android: {
                 priority: "high",
                 notification: {
                     title: payload.title,
                     body: payload.body,
-                    //icon: payload.icon,
+                    icon: payload.icon,
                     sound: "default"
-                },                
-                data: {
-                    wakeUpApp: String(payload.wakeUpApp ?? false),
-                    silent: String(payload.type === "keep-alive"), // ✅ תומך בנייטיב
-                },    
+                }
             },
             apns: {
                 payload: {
