@@ -125,6 +125,7 @@ async function sendNotification(userId, payload) {
         payloadDetails: {
             title: payload.title,
             token: payload.token,
+            token: payload.token,
             body: payload.body,
             icon: payload.icon ? 'PRESENT' : 'MISSING'
         }
@@ -153,30 +154,25 @@ async function sendNotification(userId, payload) {
 
 
         const message = {
+            notification: {
+                title: payload.title,
+                body: payload.body,
+                icon: payload.icon
+            },
             data: {
-                title: String(payload.title),
-                body: String(payload.body),
-                icon: String(payload.icon || defaultIcon),
-                badge: "https://res.cloudinary.com/dzqnyehxn/image/upload/v1739858070/belll_fes617.png",
-                sound: "default",
-                wakeUpApp: String(payload.wakeUpApp ?? true), // ✅ המרה למחרוזת
-                type: String(payload.type ?? "regular"), // ✅ המרה למחרוזת
-                silent: String(payload.silent ?? false), // ✅ המרה למחרוזת
-                requireInteraction: String(payload.requireInteraction ?? false) // ✅ המרה למחרוזת
+                wakeUpApp: String(payload.wakeUpApp ?? true),
+                type: String(payload.type ?? "regular"),
+                silent: String(payload.silent ?? false),
+                requireInteraction: String(payload.requireInteraction ?? false)
             },
             android: {
                 priority: "high",
-                data: {
-                    title: String(payload.title),
-                    body: String(payload.body),
-                    icon: String(payload.icon || defaultIcon),
-                    badge: "https://res.cloudinary.com/dzqnyehxn/image/upload/v1739858070/belll_fes617.png",
-                    sound: "default",
-                    wakeUpApp: String(payload.wakeUpApp ?? true),
-                    type: String(payload.type ?? "regular"),
-                    silent: String(payload.silent ?? false),
-                    requireInteraction: String(payload.requireInteraction ?? false)
-                },
+                notification: {
+                    title: payload.title,
+                    body: payload.body,
+                    icon: payload.icon,
+                    sound: "default"
+                }
             },
             apns: {
                 payload: {
