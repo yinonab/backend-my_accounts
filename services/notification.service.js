@@ -157,9 +157,9 @@ async function sendNotification(userId, payload) {
             notification: {
                 title: payload.title,
                 body: payload.body,
-                icon: payload.icon
             },
             data: {
+                icon: payload.icon,
                 wakeUpApp: String(payload.wakeUpApp ?? true),
                 type: String(payload.type ?? "regular"),
                 silent: String(payload.silent ?? false),
@@ -170,7 +170,7 @@ async function sendNotification(userId, payload) {
                 notification: {
                     title: payload.title,
                     body: payload.body,
-                    icon: payload.icon,
+                    //icon: payload.icon,
                     sound: "default"
                 }
             },
