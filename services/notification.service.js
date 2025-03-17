@@ -152,22 +152,20 @@ async function sendNotification(userId, payload) {
         // console.log('🚀 Sending web push notification to:', userSubscription.subscription.endpoint);
         // console.log('📨 Payload being sent:', JSON.stringify(payload, null, 2));
 
+        const isSilent = payload.type === "keep-alive";
 
         const message = {
-            notification: {
-                title: payload.title,
-                body: payload.body,
-            },
             data: {
-                icon: payload.icon,
-                wakeUpApp: String(payload.wakeUpApp ?? true),
-                type: String(payload.type ?? "regular"),
-                silent: String(payload.silent ?? false),
+                title: String(payload.title),
+                body: String(payload.body),
+                type: String(payload.type || "regular"), 
+                silent: String(isSilent), // 🔇 מסמן נוטיפיקציה שקטה
+                wakeUpApp: String(payload.wakeUpApp ?? false),
                 requireInteraction: String(payload.requireInteraction ?? false)
             },
             android: {
                 priority: "high",
-                notification: {
+                notification: isSilent ? undefined : { // ❌ לא מוסיפים notification ל-keep-alive
                     title: payload.title,
                     body: payload.body,
                     icon: payload.icon,
@@ -177,7 +175,8 @@ async function sendNotification(userId, payload) {
             apns: {
                 payload: {
                     aps: {
-                        sound: "default",
+                        sound: isSilent ? undefined : "default", // ❌ לא מנגן סאונד ב-keep-alive
+                        contentAvailable: isSilent ? true : undefined // ✅ הופך את ההודעה לרקע בלבד ב-iOS
                     }
                 }
             },
