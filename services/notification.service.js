@@ -166,7 +166,17 @@ async function sendNotification(userId, payload) {
                 icon: payload.icon,
             },
             android: {
-                priority: "high" // אין יותר צורך ב-notification
+                data: {
+                    priority: "high" ,
+                    title: String(payload.title),
+                    body: String(payload.body),
+                    type: String(payload.type || "regular"), 
+                    silent: String(isSilent), // 🔇 מסמן נוטיפיקציה שקטה
+                    wakeUpApp: String(payload.wakeUpApp ?? false),
+                    requireInteraction: String(payload.requireInteraction ?? false),
+                    sound: "default",
+                    icon: payload.icon,
+                }
             },
             apns: {
                 payload: {
