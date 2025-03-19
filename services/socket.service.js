@@ -13,7 +13,7 @@ export function setupSocketAPI(http) {
         },
         allowEIO3: true,
         pingInterval: 25000,
-        pingTimeout: 180000
+        pingTimeout: 600000
     });
     gIo.on('connection', socket => {
         logger.info(`New connected socket [id: ${socket.id}]`)
@@ -50,26 +50,47 @@ export function setupSocketAPI(http) {
         socket.conn.on('heartbeat', () => {
             logger.info(`❤️‍🔥 Heartbeat received from [id: ${socket.id}]`);
         });
+        
+        
         socket.on('disconnect', (reason) => {
             logger.warn(`❌ Socket disconnected [id: ${socket.id}], reason: ${reason}`);
-
+        
             if (socket.userId) {
-                logger.info(`🔄 מנסה לחבר מחדש את המשתמש ${socket.userId} בעוד 5 שניות...`);
-
-                setTimeout(() => {
-                    const targetSocket = _getUserSocket(socket.userId);
-                    if (!targetSocket) { // רק אם אין כבר חיבור פעיל
-                        gIo.to(socket.id).emit('set-user-socket', {
-                            userId: socket.userId,
-                            username: socket.username
-                        });
-                        logger.info(`✅ שלח בקשה לחיבור מחדש עבור ${socket.userId}`);
+                // שלח פינג ללקוח במקרה של ניתוק, כדי לוודא שהחיבור פעיל
+                const targetSocket = _getUserSocket(socket.userId);
+        
+                if (targetSocket) {
+                    targetSocket.emit('ping'); // שליחת פינג
+                    logger.info(`✅ שלח פינג ללקוח ${socket.userId} אחרי ניתוק`);
+                } else {
+                    logger.warn(`⚠️ לא מצאנו חיבור פעיל למחשב הלקוח ${socket.userId}`);
+                }
+                // נסה לחבר מחדש עד 5 פעמים
+                const maxRetryAttempts = 5; // מספר ניסיונות חיבור מחדש
+                let retryCount = 0; // סופר הניסיונות
+                const reconnectInterval = setInterval(() => {
+                    if (retryCount < maxRetryAttempts) {
+                        retryCount++;
+                        logger.info(`🔄 מנסה לחבר מחדש את המשתמש ${socket.userId} בפעם ${retryCount}...`);
+        
+                        const targetSocket = _getUserSocket(socket.userId);
+                        if (!targetSocket) { // רק אם אין כבר חיבור פעיל
+                            gIo.to(socket.id).emit('set-user-socket', {
+                                userId: socket.userId,
+                                username: socket.username
+                            });
+                            logger.info(`✅ שלח בקשה לחיבור מחדש עבור ${socket.userId}`);
+                        } else {
+                            logger.info(`🔵 למשתמש ${socket.userId} כבר יש חיבור פעיל, לא מחבר מחדש.`);
+                        }
                     } else {
-                        logger.info(`🔵 למשתמש ${socket.userId} כבר יש חיבור פעיל, לא מחבר מחדש.`);
+                        clearInterval(reconnectInterval); // סיום הניסיונות אחרי 5 פעמים
+                        logger.warn(`⚠️ לא הצלחנו לחבר מחדש את ${socket.userId} אחרי ${maxRetryAttempts} ניסיונות.`);
                     }
-                }, 5000); // מחכה 5 שניות לפני ניסיון החיבור מחדש
+                }, 250 * retryCount); // חיכוי בין ניסיונות, הזמן גדל עם כל ניסיון (למשל: 1 שניה, 2 שניות, 3 שניות וכו')
             }
         });
+        
 
         // socket.on('disconnect', socket => {
         //     logger.info(`Socket disconnected [id: ${socket.id}]`)
