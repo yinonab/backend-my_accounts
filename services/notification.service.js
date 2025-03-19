@@ -156,36 +156,27 @@ async function sendNotification(userId, payload) {
 
         const message = {
             data: {
-                title: String(payload.title),
-                body: String(payload.body),
-                type: String(payload.type || "regular"), 
-                silent: String(isSilent), // 🔇 מסמן נוטיפיקציה שקטה
-                wakeUpApp: String(payload.wakeUpApp ?? false),
-                requireInteraction: String(payload.requireInteraction ?? false)
+              title: String(payload.title),
+              body: String(payload.body),
+              type: String(payload.type || "regular"), 
+              silent: String(isSilent), // 🔇 מסמן נוטיפיקציה שקטה
+              wakeUpApp: String(payload.wakeUpApp ?? false),
+              requireInteraction: String(payload.requireInteraction ?? false),
             },
             android: {
-                priority: "high",
-                data: isSilent ? undefined : { // ❌ לא מוסיפים notification ל-keep-alive
-                    priority: "high" ,
-                    title: String(payload.title),
-                    body: String(payload.body),
-                    type: String(payload.type || "regular"), 
-                    wakeUpApp: String(payload.wakeUpApp ?? false),
-                    requireInteraction: String(payload.requireInteraction ?? false),
-                    sound: "default",
-                    icon: payload.icon,
-                }
+              priority: "high",
+              // אל תוסיף notification לכאן עבור data-only
             },
             apns: {
-                payload: {
-                    aps: {
-                        sound: isSilent ? undefined : "default", // ❌ לא מנגן סאונד ב-keep-alive
-                        contentAvailable: isSilent ? true : undefined // ✅ הופך את ההודעה לרקע בלבד ב-iOS
-                    }
-                }
+              payload: {
+                aps: {
+                  contentAvailable: true, // חיוני כדי שההודעה תהיה ברקע ב-iOS
+                },
+              },
             },
             token: userSubscription.token,
-        };
+          };
+          
 
 
 
