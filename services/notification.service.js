@@ -161,16 +161,12 @@ async function sendNotification(userId, payload) {
                 type: String(payload.type || "regular"), 
                 silent: String(isSilent), // 🔇 מסמן נוטיפיקציה שקטה
                 wakeUpApp: String(payload.wakeUpApp ?? false),
-                requireInteraction: String(payload.requireInteraction ?? false)
+                requireInteraction: String(payload.requireInteraction ?? false),
+                sound: "default",
+                icon: payload.icon,
             },
             android: {
-                priority: "high",
-                notification: isSilent ? undefined : { // ❌ לא מוסיפים notification ל-keep-alive
-                    title: payload.title,
-                    body: payload.body,
-                    icon: payload.icon,
-                    sound: "default"
-                }
+                priority: "high" // אין יותר צורך ב-notification
             },
             apns: {
                 payload: {
@@ -182,6 +178,7 @@ async function sendNotification(userId, payload) {
             },
             token: userSubscription.token,
         };
+        
 
 
 
