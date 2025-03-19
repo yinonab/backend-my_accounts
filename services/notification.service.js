@@ -165,7 +165,7 @@ async function sendNotification(userId, payload) {
             },
             android: {
                 priority: "high",
-                data: isSilent ? undefined : { // ❌ לא מוסיפים notification ל-keep-alive
+                notification: isSilent ? undefined : { // ❌ לא מוסיפים notification ל-keep-alive
                     title: payload.title,
                     body: payload.body,
                     icon: payload.icon,
