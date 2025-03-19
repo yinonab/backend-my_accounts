@@ -161,17 +161,15 @@ async function sendNotification(userId, payload) {
                 type: String(payload.type || "regular"), 
                 silent: String(isSilent), // 🔇 מסמן נוטיפיקציה שקטה
                 wakeUpApp: String(payload.wakeUpApp ?? false),
-                requireInteraction: String(payload.requireInteraction ?? false),
-                sound: "default",
-                icon: payload.icon,
+                requireInteraction: String(payload.requireInteraction ?? false)
             },
             android: {
-                data: {
+                priority: "high",
+                notification: isSilent ? undefined : { // ❌ לא מוסיפים notification ל-keep-alive
                     priority: "high" ,
                     title: String(payload.title),
                     body: String(payload.body),
                     type: String(payload.type || "regular"), 
-                    silent: String(isSilent), // 🔇 מסמן נוטיפיקציה שקטה
                     wakeUpApp: String(payload.wakeUpApp ?? false),
                     requireInteraction: String(payload.requireInteraction ?? false),
                     sound: "default",
@@ -188,7 +186,6 @@ async function sendNotification(userId, payload) {
             },
             token: userSubscription.token,
         };
-        
 
 
 
