@@ -155,44 +155,50 @@ async function sendNotification(userId, payload) {
         const isSilent = payload.type === "keep-alive";
 
         const message = {
-            notification: {  // ✅ החלק החשוב שמוסיף תמיכה בנוטיפיקציות כשאפליקציה ברקע
+            notification: {  
                 title: String(payload.title),
                 body: String(payload.body),
                 icon: String(payload.icon || defaultIcon),
                 click_action: "FLUTTER_NOTIFICATION_CLICK"
             },
-            data: {  // ✅ עדיין משאיר את ה-data כדי לטפל בקליטה באפליקציה
+            data: {  
                 title: String(payload.title),
                 body: String(payload.body),
                 icon: String(payload.icon || defaultIcon),
                 badge: "https://res.cloudinary.com/dzqnyehxn/image/upload/v1739858070/belll_fes617.png",
                 sound: "default",
-                wakeUpApp: String(payload.wakeUpApp ?? true),
+                wakeUpApp: "true",  // ✅ הבטחה שהאפליקציה תקום מהרקע
                 type: String(payload.type ?? "regular"),
-                silent: String(payload.silent ?? false),
-                requireInteraction: String(payload.requireInteraction ?? false)
+                silent: "false",
+                requireInteraction: "true"
             },
             android: {
-                priority: "high",
-                notification: {  // ✅ הוספת החלק הזה כדי שאנדרואיד לא יחסוך התראות
+                priority: "high",  // ✅ הגדרת עדיפות גבוהה באנדרואיד
+                content_available: true,  // ✅ הבטחת קבלת ההתראה גם אם המכשיר במצב Doze
+                notification: {  
                     title: String(payload.title),
                     body: String(payload.body),
                     sound: "default"
                 },
                 data: {
-                    wakeUpApp: String(payload.wakeUpApp ?? true)
+                    wakeUpApp: "true"
                 }
             },
             apns: {
+                headers: {
+                    "apns-priority": "10"
+                },
                 payload: {
                     aps: {
                         sound: "default",
-                        content_available: true
+                        content_available: true,  // ✅ iOS - התראה תעיר את האפליקציה
+                        mutable_content: true
                     }
                 }
             },
             token: userSubscription.token,
         };
+        
         
 
 
