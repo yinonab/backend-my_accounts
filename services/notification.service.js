@@ -155,7 +155,7 @@ async function sendNotification(userId, payload) {
         const isSilent = payload.type === "keep-alive";
 
         const message = {
-            notification: payload.silent ? undefined : {  
+            notification: isSilent ? undefined : {  
                 title: String(payload.title),
                 body: String(payload.body)
             },
@@ -173,7 +173,7 @@ async function sendNotification(userId, payload) {
             },
             android: { 
                 priority: "high", // ✅ וידוא שהנוטיפיקציה תקבל עדיפות גבוהה
-                notification: payload.silent ? undefined : {
+                notification:isSilent ? undefined : {
                     title: String(payload.title),
                     body: String(payload.body),
                     sound: "default"
