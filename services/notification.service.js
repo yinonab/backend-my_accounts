@@ -162,17 +162,17 @@ async function sendNotification(userId, payload) {
             data: {  
                 title: String(payload.title),
                 body: String(payload.body),
-                icon: String(payload.icon || defaultIcon),
+                icon: String(payload.icon || defaultIcon), // ✅ נשאר רק ב-data
                 badge: "https://res.cloudinary.com/dzqnyehxn/image/upload/v1739858070/belll_fes617.png",
                 sound: "default",
                 wakeUpApp: payload.wakeUpApp ? "true" : "false",
                 type: payload.type || "regular",
                 silent: payload.silent ? "true" : "false",
                 requireInteraction: payload.requireInteraction ? "true" : "false",
-                click_action: "FLUTTER_NOTIFICATION_CLICK" // ✅ עבר ל-data
+                click_action: "FLUTTER_NOTIFICATION_CLICK" // ✅ עבר ל-data בלבד
             },
             android: { 
-                priority: "high",
+                priority: "high", // ✅ וידוא שהנוטיפיקציה תקבל עדיפות גבוהה
                 notification: payload.silent ? undefined : {
                     title: String(payload.title),
                     body: String(payload.body),
@@ -180,6 +180,7 @@ async function sendNotification(userId, payload) {
                 }
             },
             apns: {
+                headers: { "apns-priority": "10" }, // ✅ חשיבות גבוהה לנוטיפיקציה ב-iOS
                 payload: { 
                     aps: { 
                         sound: "default", 
