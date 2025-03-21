@@ -155,42 +155,44 @@ async function sendNotification(userId, payload) {
         const isSilent = payload.type === "keep-alive";
 
         const message = {
-            notification: payload.silent ? undefined : {  
-                title: String(payload.title),
-                body: String(payload.body)
-            },
-            data: {  
+            notification: {  // ✅ החלק החשוב שמוסיף תמיכה בנוטיפיקציות כשאפליקציה ברקע
                 title: String(payload.title),
                 body: String(payload.body),
-                icon: String(payload.icon || defaultIcon), // ✅ נשאר רק ב-data
+                icon: String(payload.icon || defaultIcon),
+                click_action: "FLUTTER_NOTIFICATION_CLICK"
+            },
+            data: {  // ✅ עדיין משאיר את ה-data כדי לטפל בקליטה באפליקציה
+                title: String(payload.title),
+                body: String(payload.body),
+                icon: String(payload.icon || defaultIcon),
                 badge: "https://res.cloudinary.com/dzqnyehxn/image/upload/v1739858070/belll_fes617.png",
                 sound: "default",
-                wakeUpApp: payload.wakeUpApp ? "true" : "false",
-                type: payload.type || "regular",
-                silent: payload.silent ? "true" : "false",
-                requireInteraction: payload.requireInteraction ? "true" : "false",
-                click_action: "FLUTTER_NOTIFICATION_CLICK" // ✅ עבר ל-data בלבד
+                wakeUpApp: String(payload.wakeUpApp ?? true),
+                type: String(payload.type ?? "regular"),
+                silent: String(payload.silent ?? false),
+                requireInteraction: String(payload.requireInteraction ?? false)
             },
-            android: { 
-                priority: "high", // ✅ וידוא שהנוטיפיקציה תקבל עדיפות גבוהה
-                notification: payload.silent ? undefined : {
+            android: {
+                priority: "high",
+                notification: {  // ✅ הוספת החלק הזה כדי שאנדרואיד לא יחסוך התראות
                     title: String(payload.title),
                     body: String(payload.body),
                     sound: "default"
+                },
+                data: {
+                    wakeUpApp: String(payload.wakeUpApp ?? true)
                 }
             },
             apns: {
-                headers: { "apns-priority": "10" }, // ✅ חשיבות גבוהה לנוטיפיקציה ב-iOS
-                payload: { 
-                    aps: { 
-                        sound: "default", 
-                        content_available: true // ✅ נשאר רק ב-APNs (iOS)
-                    } 
+                payload: {
+                    aps: {
+                        sound: "default",
+                        content_available: true
+                    }
                 }
             },
-            token: userSubscription.token
+            token: userSubscription.token,
         };
-        
         
 
 
