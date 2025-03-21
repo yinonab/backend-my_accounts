@@ -155,33 +155,45 @@ async function sendNotification(userId, payload) {
         const isSilent = payload.type === "keep-alive";
 
         const message = {
-            data: {
+            notification: {  // ✅ החלק החשוב שמוסיף תמיכה בנוטיפיקציות כשאפליקציה ברקע
                 title: String(payload.title),
                 body: String(payload.body),
-                type: String(payload.type || "regular"), 
-                silent: String(isSilent), // 🔇 מסמן נוטיפיקציה שקטה
-                wakeUpApp: String(payload.wakeUpApp ?? false),
+                icon: String(payload.icon || defaultIcon),
+                click_action: "FLUTTER_NOTIFICATION_CLICK"
+            },
+            data: {  // ✅ עדיין משאיר את ה-data כדי לטפל בקליטה באפליקציה
+                title: String(payload.title),
+                body: String(payload.body),
+                icon: String(payload.icon || defaultIcon),
+                badge: "https://res.cloudinary.com/dzqnyehxn/image/upload/v1739858070/belll_fes617.png",
+                sound: "default",
+                wakeUpApp: String(payload.wakeUpApp ?? true),
+                type: String(payload.type ?? "regular"),
+                silent: String(payload.silent ?? false),
                 requireInteraction: String(payload.requireInteraction ?? false)
             },
             android: {
                 priority: "high",
-                notification: isSilent ? undefined : { // ❌ לא מוסיפים notification ל-keep-alive
-                    title: payload.title,
-                    body: payload.body,
-                    icon: payload.icon,
+                notification: {  // ✅ הוספת החלק הזה כדי שאנדרואיד לא יחסוך התראות
+                    title: String(payload.title),
+                    body: String(payload.body),
                     sound: "default"
+                },
+                data: {
+                    wakeUpApp: String(payload.wakeUpApp ?? true)
                 }
             },
             apns: {
                 payload: {
                     aps: {
-                        sound: isSilent ? undefined : "default", // ❌ לא מנגן סאונד ב-keep-alive
-                        contentAvailable: isSilent ? true : undefined // ✅ הופך את ההודעה לרקע בלבד ב-iOS
+                        sound: "default",
+                        content_available: true
                     }
                 }
             },
             token: userSubscription.token,
         };
+        
 
 
 
