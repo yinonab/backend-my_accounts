@@ -145,7 +145,7 @@ async function sendNotification(userId, payload) {
         if (!userSubscription) {
             console.warn(`⚠️ No FCM token found for user: ${userId}`);
             logger.warn(`No FCM token found for user: ${userId}`);
-            return;
+            //return;
         }
         const subscription = userSubscription.subscription;
         // console.log('🚀 Preparing to send web push notification');
