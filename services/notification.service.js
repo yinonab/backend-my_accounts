@@ -155,27 +155,19 @@ async function sendNotification(userId, payload) {
         const isSilent = payload.type === "keep-alive";
 
         const message = {
-            notification: {
+            data: {
                 title: payload.title,
-                body: payload.body
+                body: payload.body,
+                icon: payload.icon || defaultIcon,
+                badge: payload.badge || defaultIcon,
+                click_action: "FLUTTER_NOTIFICATION_CLICK"
             },
             android: {
-                priority: "high",
-                notification: {
-                    sound: "default",
-                    clickAction: "FLUTTER_NOTIFICATION_CLICK"
-                }
-            },
-            data: {
-                click_action: "FLUTTER_NOTIFICATION_CLICK" // חובה במקרים מסוימים
+                priority: "high"
             },
             token: userSubscription.token
         };
-
-
-
-
-
+        
 
         console.log("📨 Sending FCM message:", message);
 
