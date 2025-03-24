@@ -61,15 +61,15 @@ async function createIndexes() {
     console.log('📦 Attempting to create notification indexes');
     try {
         const collection = await dbService.getCollection(COLLECTION_NAME);
-        // console.log('🔍 Creating index on userId');
+       // console.log('🔍 Creating index on userId');
         await collection.createIndex({ userId: 1 });
-        //  console.log('🔍 Creating index on userId and createdAt');
+      //  console.log('🔍 Creating index on userId and createdAt');
         await collection.createIndex({ userId: 1, createdAt: -1 });
-        //    console.log('✅ Notification indexes created successfully');
-        //  logger.info('Notification indexes created');
+    //    console.log('✅ Notification indexes created successfully');
+      //  logger.info('Notification indexes created');
     } catch (err) {
         logger.error('Failed to create indexes', err);
-        //  console.error('❌ Failed to create indexes:', err);
+      //  console.error('❌ Failed to create indexes:', err);
     }
 }
 
@@ -155,19 +155,46 @@ async function sendNotification(userId, payload) {
         const isSilent = payload.type === "keep-alive";
 
         const message = {
-            data: {
-                title: payload.title,
-                body: payload.body,
-                icon: payload.icon || defaultIcon,
-                badge: payload.badge || defaultIcon,
-                click_action: "FLUTTER_NOTIFICATION_CLICK"
+            notification: isSilent ? undefined : {  
+                title: String(payload.title),
+                body: String(payload.body)
             },
-            android: {
-                priority: "high"
+            data: {  
+                title: String(payload.title),
+                body: String(payload.body),
+                icon: String(payload.icon || defaultIcon), // ✅ נשאר רק ב-data
+                badge: "https://res.cloudinary.com/dzqnyehxn/image/upload/v1739858070/belll_fes617.png",
+                sound: "default",
+                wakeUpApp: payload.wakeUpApp ? "true" : "false",
+                type: payload.type || "regular",
+                silent: payload.silent ? "true" : "false",
+                requireInteraction: payload.requireInteraction ? "true" : "false",
+                click_action: "FLUTTER_NOTIFICATION_CLICK" // ✅ עבר ל-data בלבד
+            },
+            android: { 
+                priority: "high", // ✅ וידוא שהנוטיפיקציה תקבל עדיפות גבוהה
+                notification:isSilent ? undefined : {
+                    title: String(payload.title),
+                    body: String(payload.body),
+                    sound: "default"
+                }
+            },
+            apns: {
+                headers: { "apns-priority": "10" }, // ✅ חשיבות גבוהה לנוטיפיקציה ב-iOS
+                payload: { 
+                    aps: { 
+                        sound: "default", 
+                        content_available: true // ✅ נשאר רק ב-APNs (iOS)
+                    } 
+                }
             },
             token: userSubscription.token
         };
         
+        
+
+
+        console.log("📨 Sending FCM message:", JSON.stringify(message, null, 2));
 
         console.log("📨 Sending FCM message:", message);
 
