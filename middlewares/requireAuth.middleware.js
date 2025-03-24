@@ -10,9 +10,9 @@ const cryptr = new Cryptr(process.env.SECRET || 'Secret-Puk-1234');
 
 export async function requireAuth(req, res, next) {
 	try {
-		console.log('🛡️ Auth Middleware - Incoming Request');
-		console.log('🔍 Headers:', req.headers);
-		console.log('🍪 Cookies:', req.cookies);
+		//console.log('🛡️ Auth Middleware - Incoming Request');
+		//console.log('🔍 Headers:', req.headers);
+		//console.log('🍪 Cookies:', req.cookies);
 
 
 		// בדוק קוקיז קודם

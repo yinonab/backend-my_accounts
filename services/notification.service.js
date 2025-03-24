@@ -61,15 +61,15 @@ async function createIndexes() {
     console.log('📦 Attempting to create notification indexes');
     try {
         const collection = await dbService.getCollection(COLLECTION_NAME);
-        console.log('🔍 Creating index on userId');
+       // console.log('🔍 Creating index on userId');
         await collection.createIndex({ userId: 1 });
-        console.log('🔍 Creating index on userId and createdAt');
+      //  console.log('🔍 Creating index on userId and createdAt');
         await collection.createIndex({ userId: 1, createdAt: -1 });
-        console.log('✅ Notification indexes created successfully');
-        logger.info('Notification indexes created');
+    //    console.log('✅ Notification indexes created successfully');
+      //  logger.info('Notification indexes created');
     } catch (err) {
         logger.error('Failed to create indexes', err);
-        console.error('❌ Failed to create indexes:', err);
+      //  console.error('❌ Failed to create indexes:', err);
     }
 }
 
