@@ -124,6 +124,17 @@ async function sendNotification(userId, payload) {
     const defaultIcon = "https://res.cloudinary.com/dzqnyehxn/image/upload/v1739858070/belll_fes617.png";
     const messageId = payload.id || `msg_${Date.now()}`;
     const isSilent = payload.type === "keep-alive";
+    if (payload.data?.senderId === userId) {
+        console.log('🚫 Blocking self-notification', {
+            userId,
+            senderId: payload.data.senderId,
+            reason: 'Prevent sending notifications to self'
+        });
+        return {
+            success: false,
+            error: 'SELF_NOTIFICATION_BLOCKED'
+        };
+    }
 
     // הדפסות אבחון ראשוניות
     console.log('🚀 Initiating HIGH PRIORITY notification:', {

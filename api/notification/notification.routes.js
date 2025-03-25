@@ -103,7 +103,23 @@ router.post('/send', log, requireAuth, async (req, res) => {
             return res.status(400).json({ error: "Title and body are required" });
         }
         console.log("🚀 Sending notification to user:", userId);
-        await notificationService.sendNotification(userId, { title, body, token, type, icon });
+        const payload = {
+            title,
+            body,
+            token,
+            type,
+            icon,
+            data: {
+                senderId: userId,  // ה-ID של השולח
+                targetUserId: userId  // במקרה הזה, הנמען הוא גם השולח (כי זו דוגמה)
+                // אם אתה שולח למשתמש אחר, החלף את targetUserId ל-ID הנמען
+            }
+        };
+
+        console.log("🚀 Sending notification with payload:", payload);
+        await notificationService.sendNotification(userId, payload);
+
+      //  await notificationService.sendNotification(userId, { title, body, token, type, icon });
 
         res.status(200).json({ message: "Notification sent successfully" });
     } catch (err) {
