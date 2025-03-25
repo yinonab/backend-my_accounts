@@ -184,7 +184,7 @@ async function sendNotification(userId, payload) {
                 })
             },
             android: {
-                priority: "max",
+                priority: "high",
                 ttl: 3600,
                 notification: isSilent ? undefined : {
                     title: String(payload.title),
