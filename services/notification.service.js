@@ -184,17 +184,35 @@ async function sendNotification(userId, payload) {
                 })
             },
             android: {
-                priority: "high",
-                ttl: 3600,
+                priority: "high", // עדיפות גבוהה למסירה
+                ttl: 86400, // זמן חיים של 24 שעות (בשניות)
+                delivery_priority: "high", // חשוב עבור Doze Mode
                 notification: isSilent ? undefined : {
                     title: String(payload.title),
                     body: String(payload.body),
                     sound: payload.sound || 'default',
                     channel_id: payload.androidChannel || 'high_importance_channel',
-                    icon: 'notification_icon',
-                    color: '#FF0000',
-                    tag: payload.tag || messageId,
-                    priority: 'high' // שינוי מ-PRIORITY_HIGH ל-high
+                    icon: 'notification_icon', // שם האייקון במשאבי האפליקציה
+                    color: '#FF0000', // צבע האייקון
+                    tag: payload.tag || messageId, // מזהה ייחודי להתראה
+                    priority: 'max', // עדיפות מקסימלית לתצוגה
+                    visibility: 'public', // הצגה במסך נעול
+                    vibrate_timings: ["100ms", "200ms", "100ms"], // דפוס ויברציה
+                    light_settings: { // הגדרות אור (למכשירים תומכים)
+                        color: {
+                            red: 1,
+                            green: 0,
+                            blue: 0,
+                            alpha: 1
+                        },
+                        light_on_duration: "1s",
+                        light_off_duration: "1s"
+                    },
+                    default_vibrate_timings: true, // שימוש בברירת מחדל אם לא מוגדר
+                    default_light_settings: true, // שימוש בברירת מחדל אם לא מוגדר
+                    default_sound: true, // שימוש בצליל ברירת מחדל
+                    notification_count: 1, // ספירת התראות
+                    event_timestamp: new Date().toISOString() // זמן האירוע
                 }
             },
             apns: {
@@ -237,6 +255,19 @@ async function sendNotification(userId, payload) {
 
         const TIMEOUT = 15000;
         const sendPromise = admin.messaging().send(message);
+        console.log('🔔 Notification sent details:', {
+            userId,
+            messageId: response.messageId || 'unknown',
+            fcmResponse: {
+                name: response.name || null,
+                messageId: response.messageId || null
+            },
+            deviceState: payload.background ? 'BACKGROUND' : 'FOREGROUND',
+            timestamp: new Date().toISOString(),
+            deliveryAttempt: 1,
+            androidConfig: message.android, // כולל את כל ההגדרות ששלחנו
+            apnsConfig: message.apns
+        });
         const timeoutPromise = new Promise((_, reject) => {
             setTimeout(() => reject(new Error('FCM_TIMEOUT')), TIMEOUT);
         });
