@@ -196,11 +196,15 @@ async function sendNotification(userId, payload) {
                     color: '#FF0000',
                     tag: payload.tag || messageId,
                     priority: 'high',// שינוי מ-PRIORITY_HIGH ל-high
-                    vibrate_timings: ["100ms", "200ms", "100ms"], // דפוס ויברציה
-                    light_settings: { // הגדרות אור (למכשירים תומכים)
-                     color: '#FF0000',
-                        light_on_duration: "1s",
-                        light_off_duration: "1s"
+                    vibrate_timings: ["0.5s", "0.8s", "0.5s"], // דפוס ויברציה
+                    light_settings: {
+                    color: {
+                        red: 255,
+                        green: 0,
+                        blue: 0
+                    },
+                    light_on_duration: "1s",
+                    light_off_duration: "1s"
                     },
                     default_vibrate_timings: true, // שימוש בברירת מחדל אם לא מוגדר
                     default_light_settings: true, // שימוש בברירת מחדל אם לא מוגדר
