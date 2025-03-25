@@ -61,15 +61,15 @@ async function createIndexes() {
     console.log('📦 Attempting to create notification indexes');
     try {
         const collection = await dbService.getCollection(COLLECTION_NAME);
-        // console.log('🔍 Creating index on userId');
+       // console.log('🔍 Creating index on userId');
         await collection.createIndex({ userId: 1 });
-        //  console.log('🔍 Creating index on userId and createdAt');
+      //  console.log('🔍 Creating index on userId and createdAt');
         await collection.createIndex({ userId: 1, createdAt: -1 });
-        //    console.log('✅ Notification indexes created successfully');
-        //  logger.info('Notification indexes created');
+    //    console.log('✅ Notification indexes created successfully');
+      //  logger.info('Notification indexes created');
     } catch (err) {
         logger.error('Failed to create indexes', err);
-        //  console.error('❌ Failed to create indexes:', err);
+      //  console.error('❌ Failed to create indexes:', err);
     }
 }
 
@@ -121,22 +121,12 @@ async function saveSubscription(token, userId) {
 }
 
 async function sendNotification(userId, payload) {
+    console.log("🎯 [4] Entered sendNotification function");
+    console.log("📤 Payload received:", JSON.stringify(payload));
     const defaultIcon = "https://res.cloudinary.com/dzqnyehxn/image/upload/v1739858070/belll_fes617.png";
     const messageId = payload.id || `msg_${Date.now()}`;
     const isSilent = payload.type === "keep-alive";
-    if (payload.data?.senderId === userId) {
-        console.log('🚫 Blocking self-notification', {
-            userId,
-            senderId: payload.data.senderId,
-            reason: 'Prevent sending notifications to self'
-        });
-        return {
-            success: false,
-            error: 'SELF_NOTIFICATION_BLOCKED'
-        };
-    }
 
-    // הדפסות אבחון ראשוניות
     console.log('🚀 Initiating HIGH PRIORITY notification:', {
         messageId,
         userId,
@@ -152,7 +142,6 @@ async function sendNotification(userId, payload) {
         const collection = await dbService.getCollection(COLLECTION_NAME);
         const userSubscription = await collection.findOne({ userId });
 
-        // בדיקות טוקן מפורטות
         if (!userSubscription?.token) {
             console.error('❌ [FCM-ERROR] No valid token for user', {
                 userId,
@@ -163,7 +152,7 @@ async function sendNotification(userId, payload) {
             return { success: false, error: 'MISSING_TOKEN' };
         }
 
-        // בניית הודעת FCM עם עדיפות גבוהה תמידית
+        // בניית הודעת FCM עם שדות כסטרינג
         const message = {
             token: userSubscription.token,
             data: {
@@ -175,49 +164,51 @@ async function sendNotification(userId, payload) {
                 sound: payload.sound || 'default',
                 type: payload.type || 'regular',
                 silent: String(!!payload.silent),
-                wakeUpApp: "true", // תמיד ננסה להעיר את האפליקציה
+                wakeUpApp: "true",
                 requireInteraction: String(!!payload.requireInteraction),
                 click_action: "FLUTTER_NOTIFICATION_CLICK",
                 timestamp: Date.now().toString(),
                 messageId,
-                urgent: "true", // תמיד נסמן כ-urgent
-                delivery_priority: "high" // עדיפות מסירה גבוהה
+                urgent: "true",
+                // הוספת השדות הבעייתיים כסטרינג JSON
+                android_notification_config: JSON.stringify({
+                    channel_id: payload.androidChannel || 'high_importance_channel',
+                    priority: "high",
+                    visibility: "public",
+                    vibrate_timings: ["100ms", "200ms", "100ms"],
+                    light_settings: {
+                        color: '#FF0000',
+                        light_on_duration: '1000ms',
+                        light_off_duration: '1000ms'
+                    }
+                })
             },
             android: {
-                priority: "high", // עדיפות גבוהה תמידית
-                ttl: 86400, // זמן חיים מקסימלי (1 שעה)
-                //delivery_priority: "high", // עדיפות מסירה גבוהה
+                priority: "max",
+                ttl: 3600,
                 notification: isSilent ? undefined : {
                     title: String(payload.title),
                     body: String(payload.body),
                     sound: payload.sound || 'default',
+                    visibility: 'public',
                     channel_id: payload.androidChannel || 'high_importance_channel',
                     icon: 'notification_icon',
-                    color: "#FF0000",
+                    color: '#FF0000',
                     tag: payload.tag || messageId,
-                    priority: 'high', // עדיפות תצוגה גבוהה
-                    visibility: 'public', // הצגה גם במסך נעול
-                    // event_timestamp: new Date().toISOString(),
-                    vibrate_timings: ["0.1s", "0.2s", "0.1s"], // ויברציה לבולטות
-                    light_settings: { // הגדרות אור לבולטות
-                        color: { red: 1.0, green: 0.0, blue: 0.0, alpha: 1.0 },
-                        light_on_duration: "1s",
-                        light_off_duration: "1s"
-
-                    }
+                    priority: 'high' // שינוי מ-PRIORITY_HIGH ל-high
                 }
             },
             apns: {
                 headers: {
-                    'apns-priority': '10', // עדיפות גבוהה תמידית ב-iOS
+                    'apns-priority': '10',
                     'apns-push-type': isSilent ? 'background' : 'alert',
-                    'apns-collapse-id': messageId // קבוצת התראות
+                    'apns-collapse-id': messageId
                 },
                 payload: {
                     aps: {
                         sound: payload.sound || 'default',
                         badge: payload.badgeCount || 1,
-                        'content-available': 1, // תמיד אפשרי תוכן (הערת אפליקציה)
+                        'content-available': 1,
                         mutableContent: 1,
                         alert: {
                             title: payload.title,
@@ -229,10 +220,10 @@ async function sendNotification(userId, payload) {
             fcmOptions: {
                 analyticsLabel: payload.type || 'high_priority'
             },
-            webpush: { // עבור דפדפנים
+            webpush: {
                 headers: {
-                    Urgency: 'high', // עדיפות גבוהה בדפדפן
-                    TTL: '3600' // זמן חיים ארוך
+                    Urgency: 'high',
+                    TTL: '3600'
                 }
             }
         };
@@ -245,8 +236,7 @@ async function sendNotification(userId, payload) {
             containsNotification: !!message.android.notification
         });
 
-        // שליחה עם timeout
-        const TIMEOUT = 15000; // 15 שניות timeout
+        const TIMEOUT = 15000;
         const sendPromise = admin.messaging().send(message);
         const timeoutPromise = new Promise((_, reject) => {
             setTimeout(() => reject(new Error('FCM_TIMEOUT')), TIMEOUT);
@@ -269,9 +259,8 @@ async function sendNotification(userId, payload) {
         };
 
     } catch (error) {
-        // טיפול בשגיאות מפורט
         let errorType = 'UNKNOWN_ERROR';
-        let severity = 'CRITICAL'; // שגיאות בעדיפות גבוהה הן קריטיות
+        let severity = 'CRITICAL';
         let solution = 'Immediate attention required';
         let deviceState = 'UNKNOWN';
 
