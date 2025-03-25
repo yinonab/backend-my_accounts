@@ -121,6 +121,8 @@ async function saveSubscription(token, userId) {
 }
 
 async function sendNotification(userId, payload) {
+    console.log("🎯 [4] Entered sendNotification function");
+    console.log("📤 Payload received:", JSON.stringify(payload));
     const defaultIcon = "https://res.cloudinary.com/dzqnyehxn/image/upload/v1739858070/belll_fes617.png";
     const messageId = payload.id || `msg_${Date.now()}`;
     const isSilent = payload.type === "keep-alive";
@@ -192,6 +194,7 @@ async function sendNotification(userId, payload) {
                     icon: 'notification_icon',
                     color: '#FF0000',
                     tag: payload.tag || messageId,
+                   // priority: 'high' // שינוי מ-PRIORITY_HIGH ל-high
                     priority: "max", // חדש! חשיבות מקסימלית
                     visibility: "public", // הצגה במסך נעול
                     notification_count: 1 // ספירת התראות
