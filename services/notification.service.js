@@ -187,11 +187,12 @@ async function sendNotification(userId, payload) {
                     priority: 'PRIORITY_HIGH', // עדיפות תצוגה גבוהה
                     visibility: 'public', // הצגה גם במסך נעול
                     // event_timestamp: new Date().toISOString(),
-                    vibrate_timings: ["100ms", "200ms", "100ms"], // ויברציה לבולטות
+                    vibrate_timings: ["0.1s", "0.2s", "0.1s"], // ויברציה לבולטות
                     light_settings: { // הגדרות אור לבולטות
-                        color: '#FF0000',
-                        light_on_duration: '1000ms',
-                        light_off_duration: '1000ms'
+                        color: { red: 1.0, green: 0.0, blue: 0.0, alpha: 1.0 },
+                        light_on_duration: "1s",
+                        light_off_duration: "1s"
+
                     }
                 }
             },
