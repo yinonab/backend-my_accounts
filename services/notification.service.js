@@ -121,6 +121,8 @@ async function saveSubscription(token, userId) {
 }
 
 async function sendNotification(userId, payload) {
+    console.log("🎯 [4] Entered sendNotification function");
+    console.log("📤 Payload received:", JSON.stringify(payload));
     const defaultIcon = "https://res.cloudinary.com/dzqnyehxn/image/upload/v1739858070/belll_fes617.png";
     const messageId = payload.id || `msg_${Date.now()}`;
     const isSilent = payload.type === "keep-alive";
