@@ -192,8 +192,8 @@ async function sendNotification(userId, payload) {
                     body: String(payload.body),
                     sound: payload.sound || 'default',
                     channel_id: payload.androidChannel || 'high_importance_channel',
-                    urgency: "high",
-                    require_interaction: "true",
+                    //urgency: "high",
+                    //require_interaction: "true",
                     icon: 'notification_icon', // שם האייקון במשאבי האפליקציה
                     color: '#FF0000', // צבע האייקון
                     tag: payload.tag || messageId, // מזהה ייחודי להתראה
