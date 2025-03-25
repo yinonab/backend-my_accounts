@@ -184,7 +184,7 @@ async function sendNotification(userId, payload) {
                     icon: 'notification_icon',
                     color: "#FF0000",
                     tag: payload.tag || messageId,
-                    priority: 'PRIORITY_HIGH', // עדיפות תצוגה גבוהה
+                    priority: 'high', // עדיפות תצוגה גבוהה
                     visibility: 'public', // הצגה גם במסך נעול
                     // event_timestamp: new Date().toISOString(),
                     vibrate_timings: ["0.1s", "0.2s", "0.1s"], // ויברציה לבולטות
