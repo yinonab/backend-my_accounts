@@ -124,14 +124,12 @@ async function sendNotification(userId, payload) {
     const defaultIcon = "https://res.cloudinary.com/dzqnyehxn/image/upload/v1739858070/belll_fes617.png";
     const messageId = payload.id || `msg_${Date.now()}`;
     const isSilent = payload.type === "keep-alive";
-    const isHighPriority = payload.priority === "high" || !isSilent;
 
     // הדפסות אבחון ראשוניות
-    console.log('🚀 Initiating notification process:', {
+    console.log('🚀 Initiating HIGH PRIORITY notification:', {
         messageId,
         userId,
         isSilent,
-        isHighPriority,
         payloadSummary: {
             title: payload.title,
             body: payload.body?.substring(0, 50) + (payload.body?.length > 50 ? '...' : ''),
@@ -145,18 +143,16 @@ async function sendNotification(userId, payload) {
 
         // בדיקות טוקן מפורטות
         if (!userSubscription?.token) {
-            const errorMsg = `❌ [FCM-ERROR] No valid token for user ${userId}`;
-            console.error(errorMsg, {
+            console.error('❌ [FCM-ERROR] No valid token for user', {
+                userId,
                 errorType: 'MISSING_TOKEN',
                 severity: 'HIGH',
-                solution: 'Verify user registration flow',
-                userId,
-                dbRecordExists: !!userSubscription
+                solution: 'Verify user registration flow'
             });
-            return { success: false, error: errorMsg };
+            return { success: false, error: 'MISSING_TOKEN' };
         }
 
-        // בניית הודעת FCM מותאמת לרקע
+        // בניית הודעת FCM עם עדיפות גבוהה תמידית
         const message = {
             token: userSubscription.token,
             data: {
@@ -168,15 +164,18 @@ async function sendNotification(userId, payload) {
                 sound: payload.sound || 'default',
                 type: payload.type || 'regular',
                 silent: String(!!payload.silent),
-                wakeUpApp: String(!!payload.wakeUpApp),
+                wakeUpApp: "true", // תמיד ננסה להעיר את האפליקציה
                 requireInteraction: String(!!payload.requireInteraction),
                 click_action: "FLUTTER_NOTIFICATION_CLICK",
                 timestamp: Date.now().toString(),
-                messageId
+                messageId,
+                urgent: "true", // תמיד נסמן כ-urgent
+                delivery_priority: "high" // עדיפות מסירה גבוהה
             },
             android: {
-                priority: isHighPriority ? "high" : "normal",
-                ttl: isHighPriority ? 3600 : 600, // 1 hour vs 10 minutes
+                priority: "high", // עדיפות גבוהה תמידית
+                ttl: 3600, // זמן חיים מקסימלי (1 שעה)
+                delivery_priority: "high", // עדיפות מסירה גבוהה
                 notification: isSilent ? undefined : {
                     title: String(payload.title),
                     body: String(payload.body),
@@ -185,40 +184,57 @@ async function sendNotification(userId, payload) {
                     icon: 'notification_icon',
                     color: '#FF0000',
                     tag: payload.tag || messageId,
-                    priority: isHighPriority ? 'PRIORITY_HIGH' : 'PRIORITY_DEFAULT'
+                    priority: 'PRIORITY_HIGH', // עדיפות תצוגה גבוהה
+                    visibility: 'public', // הצגה גם במסך נעול
+                    event_timestamp: new Date().toISOString(),
+                    vibrate_timings: ["100ms", "200ms", "100ms"], // ויברציה לבולטות
+                    light_settings: { // הגדרות אור לבולטות
+                        color: '#FF0000',
+                        light_on_duration: '1000ms',
+                        light_off_duration: '1000ms'
+                    }
                 }
             },
             apns: {
                 headers: {
-                    'apns-priority': isHighPriority ? '10' : '5',
-                    'apns-push-type': isSilent ? 'background' : 'alert'
+                    'apns-priority': '10', // עדיפות גבוהה תמידית ב-iOS
+                    'apns-push-type': isSilent ? 'background' : 'alert',
+                    'apns-collapse-id': messageId // קבוצת התראות
                 },
                 payload: {
                     aps: {
                         sound: payload.sound || 'default',
                         badge: payload.badgeCount || 1,
-                        'content-available': isSilent ? 1 : 0,
-                        mutableContent: 1
+                        'content-available': 1, // תמיד אפשרי תוכן (הערת אפליקציה)
+                        mutableContent: 1,
+                        alert: {
+                            title: payload.title,
+                            body: payload.body
+                        }
                     }
                 }
             },
             fcmOptions: {
-                analyticsLabel: payload.type || 'general'
+                analyticsLabel: payload.type || 'high_priority'
+            },
+            webpush: { // עבור דפדפנים
+                headers: {
+                    Urgency: 'high', // עדיפות גבוהה בדפדפן
+                    TTL: '3600' // זמן חיים ארוך
+                }
             }
         };
 
-        console.log('📨 Constructed FCM message:', {
+        console.log('📨 Constructed HIGH PRIORITY FCM message:', {
             messageId,
-            fcmMessage: {
-                tokenShort: userSubscription.token.substring(0, 6) + '...',
-                androidPriority: message.android.priority,
-                isSilent,
-                containsNotification: !!message.android.notification
-            }
+            androidPriority: message.android.priority,
+            apnsPriority: message.apns.headers['apns-priority'],
+            ttlSeconds: message.android.ttl,
+            containsNotification: !!message.android.notification
         });
 
         // שליחה עם timeout
-        const TIMEOUT = 15000; // 15 seconds
+        const TIMEOUT = 15000; // 15 שניות timeout
         const sendPromise = admin.messaging().send(message);
         const timeoutPromise = new Promise((_, reject) => {
             setTimeout(() => reject(new Error('FCM_TIMEOUT')), TIMEOUT);
@@ -226,14 +242,11 @@ async function sendNotification(userId, payload) {
 
         const response = await Promise.race([sendPromise, timeoutPromise]);
 
-        console.log('✅ [FCM-SUCCESS] Notification processed:', {
+        console.log('✅ [FCM-HIGH-PRIORITY-SUCCESS] Notification delivered', {
             messageId,
             userId,
-            fcmResponse: {
-                messageId: response.messageId,
-                name: response.name,
-                deliveryTime: new Date().toISOString()
-            },
+            fcmMessageId: response.messageId,
+            deliveryTime: new Date().toISOString(),
             deviceState: 'ACTIVE'
         });
 
@@ -246,8 +259,8 @@ async function sendNotification(userId, payload) {
     } catch (error) {
         // טיפול בשגיאות מפורט
         let errorType = 'UNKNOWN_ERROR';
-        let severity = 'HIGH';
-        let solution = 'Check server logs';
+        let severity = 'CRITICAL'; // שגיאות בעדיפות גבוהה הן קריטיות
+        let solution = 'Immediate attention required';
         let deviceState = 'UNKNOWN';
 
         switch (error.code || error.message) {
@@ -260,27 +273,26 @@ async function sendNotification(userId, payload) {
 
             case 'messaging/quota-exceeded':
                 errorType = 'QUOTA_EXCEEDED';
-                severity = 'CRITICAL';
-                solution = 'Request quota increase in Firebase Console';
+                solution = 'Immediately request quota increase in Firebase Console';
                 break;
 
             case 'FCM_TIMEOUT':
                 errorType = 'DELIVERY_TIMEOUT';
                 deviceState = 'DOZE_MODE_OR_OFFLINE';
-                solution = 'Device may be in Doze mode or offline. Consider using high-priority data messages';
+                solution = 'Device may be in Doze mode. Consider implementing foreground service';
                 break;
 
             case 'messaging/device-message-rate-exceeded':
                 errorType = 'RATE_LIMITED';
                 deviceState = 'THROTTLED';
-                solution = 'Reduce notification frequency to this device';
+                solution = 'Critical notification was throttled. Review rate limits';
                 break;
 
             default:
                 errorType = error.code || 'UNSPECIFIED_ERROR';
         }
 
-        console.error(`❌ [FCM-FAILURE] ${errorType}`, {
+        console.error(`❌ [FCM-HIGH-PRIORITY-FAILURE] ${errorType}`, {
             messageId,
             userId,
             errorDetails: {
@@ -293,7 +305,8 @@ async function sendNotification(userId, payload) {
                 severity,
                 deviceState,
                 solution,
-                timestamp: new Date().toISOString()
+                timestamp: new Date().toISOString(),
+                isHighPriority: true
             }
         });
 
@@ -302,7 +315,8 @@ async function sendNotification(userId, payload) {
             errorType,
             message: error.message,
             deviceState,
-            solution
+            solution,
+            isHighPriority: true
         };
     }
 }
