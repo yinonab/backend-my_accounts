@@ -114,8 +114,6 @@ router.post('/send', log, requireAuth, async (req, res) => {
             data: {
                 senderId,
                 targetUserId: targetUserId || senderId,
-                ...customData, // כל נתונים נוספים שנשלחו
-                timestamp: new Date().toISOString()
             }
         };
 
