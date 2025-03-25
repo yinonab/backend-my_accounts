@@ -174,19 +174,19 @@ async function sendNotification(userId, payload) {
             },
             android: {
                 priority: "high", // עדיפות גבוהה תמידית
-                ttl: 3600, // זמן חיים מקסימלי (1 שעה)
-                delivery_priority: "high", // עדיפות מסירה גבוהה
+                ttl: 86400, // זמן חיים מקסימלי (1 שעה)
+                //delivery_priority: "high", // עדיפות מסירה גבוהה
                 notification: isSilent ? undefined : {
                     title: String(payload.title),
                     body: String(payload.body),
                     sound: payload.sound || 'default',
                     channel_id: payload.androidChannel || 'high_importance_channel',
                     icon: 'notification_icon',
-                    color: '#FF0000',
+                    "color": { "red": 1.0, "green": 0.0, "blue": 0.0, "alpha": 1.0 },
                     tag: payload.tag || messageId,
                     priority: 'PRIORITY_HIGH', // עדיפות תצוגה גבוהה
                     visibility: 'public', // הצגה גם במסך נעול
-                    event_timestamp: new Date().toISOString(),
+                    // event_timestamp: new Date().toISOString(),
                     vibrate_timings: ["100ms", "200ms", "100ms"], // ויברציה לבולטות
                     light_settings: { // הגדרות אור לבולטות
                         color: '#FF0000',
