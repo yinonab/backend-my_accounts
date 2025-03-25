@@ -195,7 +195,17 @@ async function sendNotification(userId, payload) {
                     icon: 'notification_icon',
                     color: '#FF0000',
                     tag: payload.tag || messageId,
-                    priority: 'high' // שינוי מ-PRIORITY_HIGH ל-high
+                    priority: 'high',// שינוי מ-PRIORITY_HIGH ל-high
+                    vibrate_timings: ["100ms", "200ms", "100ms"], // דפוס ויברציה
+                    light_settings: { // הגדרות אור (למכשירים תומכים)
+                     color: '#FF0000',
+                        light_on_duration: "1s",
+                        light_off_duration: "1s"
+                    },
+                    default_vibrate_timings: true, // שימוש בברירת מחדל אם לא מוגדר
+                    default_light_settings: true, // שימוש בברירת מחדל אם לא מוגדר
+                    default_sound: true, // שימוש בצליל ברירת מחדל
+                    notification_count: 1, // ספירת התראות
                 }
             },
             apns: {
