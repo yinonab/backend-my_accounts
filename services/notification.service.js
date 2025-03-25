@@ -182,7 +182,7 @@ async function sendNotification(userId, payload) {
                     sound: payload.sound || 'default',
                     channel_id: payload.androidChannel || 'high_importance_channel',
                     icon: 'notification_icon',
-                    "color": { "red": 1.0, "green": 0.0, "blue": 0.0, "alpha": 1.0 },
+                    color: "#FF0000",
                     tag: payload.tag || messageId,
                     priority: 'PRIORITY_HIGH', // עדיפות תצוגה גבוהה
                     visibility: 'public', // הצגה גם במסך נעול
