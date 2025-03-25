@@ -110,12 +110,14 @@ router.post('/send', log, requireAuth, async (req, res) => {
             type,
             icon,
             data: {
-                senderId: userId,  // ה-ID של השולח
-                targetUserId: userId  // במקרה הזה, הנמען הוא גם השולח (כי זו דוגמה)
-                // אם אתה שולח למשתמש אחר, החלף את targetUserId ל-ID הנמען
+                senderId,
+                targetUserId: targetUserId || senderId,
+                ...customData, // כל נתונים נוספים שנשלחו
+                timestamp: new Date().toISOString()
             }
         };
 
+      
         console.log("🚀 Sending notification with payload:", payload);
         await notificationService.sendNotification(userId, payload);
 
