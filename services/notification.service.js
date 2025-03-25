@@ -194,10 +194,7 @@ async function sendNotification(userId, payload) {
                     icon: 'notification_icon',
                     color: '#FF0000',
                     tag: payload.tag || messageId,
-                   // priority: 'high' // שינוי מ-PRIORITY_HIGH ל-high
-                    priority: "max", // חדש! חשיבות מקסימלית
-                    visibility: "public", // הצגה במסך נעול
-                    notification_count: 1 // ספירת התראות
+                    priority: 'high' // שינוי מ-PRIORITY_HIGH ל-high
                 }
             },
             apns: {
