@@ -219,32 +219,28 @@ async function sendNotification(userId, payload) {
             },
             apns: {
                 headers: {
-                    'apns-priority': '10',       // עדיפות גבוהה (ערכים תקניים: 5 או 10)
-                    'apns-push-type': 'alert',   // או 'background' להודעות שקטות
-                    'apns-collapse-id': messageId, // מזהה לקיבוץ התראות
-                    'apns-expiration': '0',      // 0 = מיידי, או timestamp ל-expiration
-                    'apns-topic': 'com.your.app.bundle.id' // חובה עבור iOS
+                    'apns-priority': '10',
+                  //  'apns-push-type': isSilent ? 'background' : 'alert',
+                    'apns-collapse-id': messageId,
+                    'apns-expiration': '0',
+                    'apns-topic': 'com.your.app.bundle.id' // יש להחליף למזהה האמיתי שלך
                 },
                 payload: {
                     aps: {
                         alert: {
                             title: payload.title,
-                            body: payload.body,
-                            // subtitle: '' // אופציונלי
+                            body: payload.body
                         },
                         sound: payload.sound || 'default',
-                        badge: payload.badgeCount || 1,
-                        'content-available': 1, // 1 להפעלת רקע
-                        'mutable-content': 1,   // 1 לעיבוד מותאם
-                        'thread-id': payload.threadId || 'general' // קבוצת התראות
+                        badge: payload.badgeCount || 0,
+                        'content-available': isSilent ? 1 : 0,
+                        'mutable-content': 1
                     },
-                    // ניתן להוסיף שדות נוספים מחוץ ל-aps
-                    custom_data: {
-                        // שדות מותאמים שלך
-                        type: payload.type || 'regular',
-                        deep_link: payload.deepLink || ''
-                    }
-                }            
+                    notificationId: messageId,
+                    senderId: userId,
+                    notificationType: payload.type || 'regular'                
+                }
+            
             },
             fcmOptions: {
                 analyticsLabel: payload.type || 'high_priority'
