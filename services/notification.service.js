@@ -121,8 +121,6 @@ async function saveSubscription(token, userId) {
 }
 
 async function sendNotification(userId, payload) {
-    console.log("🎯 [4] Entered sendNotification function");
-    console.log("📤 Payload received:", JSON.stringify(payload));
     const defaultIcon = "https://res.cloudinary.com/dzqnyehxn/image/upload/v1739858070/belll_fes617.png";
     const messageId = payload.id || `msg_${Date.now()}`;
     const isSilent = payload.type === "keep-alive";
@@ -184,63 +182,39 @@ async function sendNotification(userId, payload) {
                 })
             },
             android: {
-                priority: "high", // עדיפות גבוהה למסירה
-                ttl: 86400, // זמן חיים של 24 שעות (בשניות)
-                //delivery_priority: "high", // חשוב עבור Doze Mode
+                priority: "high",
+                ttl: 3600,
                 notification: isSilent ? undefined : {
                     title: String(payload.title),
                     body: String(payload.body),
                     sound: payload.sound || 'default',
                     channel_id: payload.androidChannel || 'high_importance_channel',
-                    //urgency: "high",
-                    //require_interaction: "true",
-                    icon: 'notification_icon', // שם האייקון במשאבי האפליקציה
-                    color: '#FF0000', // צבע האייקון
-                    tag: payload.tag || messageId, // מזהה ייחודי להתראה
-                    priority: 'max', // עדיפות מקסימלית לתצוגה
-                    visibility: 'public', // הצגה במסך נעול
-                    //vibrate_timings: ["100ms", "200ms", "100ms"], // דפוס ויברציה
-                    light_settings: { // הגדרות אור (למכשירים תומכים)
-                        color: {
-                            red: 1,
-                            green: 0,
-                            blue: 0,
-                            alpha: 1
-                        },
-                        light_on_duration: "1s",
-                        light_off_duration: "1s"
-                    },
-                    default_vibrate_timings: true, // שימוש בברירת מחדל אם לא מוגדר
-                    default_light_settings: true, // שימוש בברירת מחדל אם לא מוגדר
-                    default_sound: true, // שימוש בצליל ברירת מחדל
-                    notification_count: 1, // ספירת התראות
-                    //event_timestamp: new Date().toISOString() // זמן האירוע
+                    icon: 'notification_icon',
+                    color: '#FF0000',
+                    tag: payload.tag || messageId,
+                    priority: "max", // חדש! חשיבות מקסימלית
+                    visibility: "public", // הצגה במסך נעול
+                    notification_count: 1 // ספירת התראות
                 }
             },
             apns: {
                 headers: {
                     'apns-priority': '10',
-                  //  'apns-push-type': isSilent ? 'background' : 'alert',
-                    'apns-collapse-id': messageId,
-                    'apns-expiration': '0',
-                    'apns-topic': 'com.your.app.bundle.id' // יש להחליף למזהה האמיתי שלך
+                    'apns-push-type': isSilent ? 'background' : 'alert',
+                    'apns-collapse-id': messageId
                 },
                 payload: {
                     aps: {
+                        sound: payload.sound || 'default',
+                        badge: payload.badgeCount || 1,
+                        'content-available': 1,
+                        mutableContent: 1,
                         alert: {
                             title: payload.title,
                             body: payload.body
-                        },
-                        sound: payload.sound || 'default',
-                        badge: payload.badgeCount || 0,
-                        'content-available': isSilent ? 1 : 0,
-                        'mutable-content': 1
-                    },
-                    notificationId: messageId,
-                    senderId: userId,
-                    notificationType: payload.type || 'regular'                
+                        }
+                    }
                 }
-            
             },
             fcmOptions: {
                 analyticsLabel: payload.type || 'high_priority'
@@ -263,25 +237,11 @@ async function sendNotification(userId, payload) {
 
         const TIMEOUT = 15000;
         const sendPromise = admin.messaging().send(message);
-        
         const timeoutPromise = new Promise((_, reject) => {
             setTimeout(() => reject(new Error('FCM_TIMEOUT')), TIMEOUT);
         });
 
         const response = await Promise.race([sendPromise, timeoutPromise]);
-        console.log('🔔 Notification sent details:', {
-            userId,
-            messageId: response.messageId || 'unknown',
-            fcmResponse: {
-                name: response.name || null,
-                messageId: response.messageId || null
-            },
-            deviceState: payload.background ? 'BACKGROUND' : 'FOREGROUND',
-            timestamp: new Date().toISOString(),
-            deliveryAttempt: 1,
-            androidConfig: message.android, // כולל את כל ההגדרות ששלחנו
-            apnsConfig: message.apns
-        });
 
         console.log('✅ [FCM-HIGH-PRIORITY-SUCCESS] Notification delivered', {
             messageId,
