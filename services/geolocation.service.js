@@ -1,4 +1,6 @@
-const admin = require("firebase-admin");
+//const admin = require("firebase-admin");
+import { notificationService } from "../services/notification.service.js";
+
 
 // הגדרת אזור בטוח
 const SAFE_ZONE = {
@@ -27,24 +29,21 @@ async function checkUserLocation(userId, userLat, userLng, userToken) {
 
     if (distance > SAFE_ZONE.radius) {
         console.log(`🚨 User ${userId} יצא מהאזור! שולח התראה...`);
-        
-        const message = {
-            notification: {
-                title: "התראה גיאוגרפית!",
-                body: "יצאת מהאזור המוגדר!"
-            },
-            data: {
-                eventType: "geo-alert",
-                click_action: "FLUTTER_NOTIFICATION_CLICK"
-            },
-            android: {
-                priority: "high"
-            },
-            token: userToken
-        };
 
         try {
-            const response = await admin.messaging().send(message);
+            const response = await notificationService.sendNotification(userId, {
+                title: "התראה גיאוגרפית!",
+                body: "יצאת מהאזור המוגדר!",
+                type: "geo-alert",
+                token: userToken,  
+                data: {
+                    eventType: "geo-alert",
+                    click_action: "FLUTTER_NOTIFICATION_CLICK"
+                },
+                androidChannel: "high_importance_channel",
+                priority: "high"
+            });
+
             console.log("✅ התראה נשלחה בהצלחה:", response);
         } catch (error) {
             console.error("❌ שגיאה בשליחת התראה:", error);
@@ -53,6 +52,6 @@ async function checkUserLocation(userId, userLat, userLng, userToken) {
 }
 
 // פונקציה שמקבלת את מיקום המשתמש, מבצעת בדיקה ושולחת התראה אם צריך
-exports.updateUserLocation = async (userId, lat, lng, token) => {
+export async function updateUserLocation(userId, lat, lng, token) {
     await checkUserLocation(userId, parseFloat(lat), parseFloat(lng), token);
-};
+}
