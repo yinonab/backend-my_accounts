@@ -1,5 +1,5 @@
 import express from "express";
-import geolocationService from "../../services/geolocation.service";
+import geolocationService from "../../services/geolocation.service.js";
 
 const router = express.Router();
 
