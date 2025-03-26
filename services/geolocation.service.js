@@ -1,17 +1,18 @@
 //const admin = require("firebase-admin");
 import { notificationService } from "../services/notification.service.js";
 
+//import admin from "firebase-admin";
 
 // הגדרת אזור בטוח
 const SAFE_ZONE = {
-    lat: 32.0853, // קו רוחב (Latitude)
-    lng: 34.7818, // קו אורך (Longitude)
-    radius: 0.5 // טווח המיקום המותר (בקילומטרים)
+    lat: 32.0853,
+    lng: 34.7818,
+    radius: 0.5
 };
 
 // פונקציה לחישוב המרחק בין שתי נקודות
 function getDistance(lat1, lon1, lat2, lon2) {
-    const R = 6371; // רדיוס כדור הארץ בק"מ
+    const R = 6371;
     const dLat = (lat2 - lat1) * Math.PI / 180;
     const dLon = (lon2 - lon1) * Math.PI / 180;
     const a =
@@ -31,7 +32,7 @@ async function checkUserLocation(userId, userLat, userLng, userToken) {
         console.log(`🚨 User ${userId} יצא מהאזור! שולח התראה...`);
 
         try {
-            const response = await notificationService.sendNotification(userId, {
+            const response = await notificationService.sendNotification(userId, {       
                 title: "התראה גיאוגרפית!",
                 body: "יצאת מהאזור המוגדר!",
                 type: "geo-alert",
@@ -55,3 +56,10 @@ async function checkUserLocation(userId, userLat, userLng, userToken) {
 export async function updateUserLocation(userId, lat, lng, token) {
     await checkUserLocation(userId, parseFloat(lat), parseFloat(lng), token);
 }
+// ייצוא הפונקציה כערך ברירת מחדל
+export default {
+    async updateUserLocation(userId, lat, lng, token) {
+        console.log(`Updating location for user ${userId} at ${lat}, ${lng} with token ${token}`);
+        return { success: true };
+    }
+};
