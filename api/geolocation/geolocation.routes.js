@@ -12,5 +12,5 @@ router.post("/update-location", async (req, res) => {
     await geolocationService.updateUserLocation(userId, lat, lng, token);
     res.status(200).json({ message: "Location updated successfully" });
 });
-export const geolocationRoutes = router;
-//module.exports = router;
+
+module.exports = router;
