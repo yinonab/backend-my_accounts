@@ -1,6 +1,7 @@
-const express = require("express");
+import express from "express";
+import geolocationService from "../../services/geolocation.service";
+
 const router = express.Router();
-const geolocationService = require("../../services/geolocation.service");
 
 router.post("/update-location", async (req, res) => {
     const { userId, lat, lng, token } = req.body;
@@ -13,4 +14,4 @@ router.post("/update-location", async (req, res) => {
     res.status(200).json({ message: "Location updated successfully" });
 });
 
-module.exports = router;
+export default router;
