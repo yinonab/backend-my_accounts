@@ -18,6 +18,7 @@ import { userRoutes } from './api/user/user.routes.js';
 import { reviewRoutes } from './api/review/review.routes.js';
 import { contactRoutes } from './api/contact/contact.routes.js';
 import { notificationRoutes } from './api/notification/notification.routes.js';
+import geolocationRoutes from './api/geolocation/geolocation.routes.js';
 
 import { setupSocketAPI } from './services/socket.service.js';
 import { setupAsyncLocalStorage } from './middlewares/setupAls.middleware.js';
@@ -134,6 +135,8 @@ app.use('/api/user', userRoutes);
 app.use('/api/review', reviewRoutes);
 app.use('/api/contact', contactRoutes);
 app.use('/api/notification', notificationRoutes);
+app.use("/api/geolocation", geolocationRoutes);
+
 
 
 // Debugging request logs
