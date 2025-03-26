@@ -170,6 +170,7 @@ async function update(user) {
 
         // בדיקה ועדכון שדות רק אם הם קיימים
         if (user.username) userToUpdate.username = user.username;
+        (user.homeLocation && { homeLocation: user.homeLocation });
         //if (user.password) userToUpdate.password = user.password;
         if (user.email) userToUpdate.email = user.email;
         if (user.img) userToUpdate.img = user.img; // שדה התמונה שלך
@@ -226,6 +227,7 @@ async function add(user) {
             img: user.img,
             createdAt: Date.now(),
             isAdmin: user.isAdmin,
+            homeLocation: user.homeLocation || null,
             // score: 100,
         }
         const collection = await dbService.getCollection('user')

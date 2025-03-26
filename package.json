@@ -8,7 +8,9 @@
         "start": "nodemon server.js",
         "server:dev": "nodemon server.js",
         "server:prod": "set NODE_ENV=production&node server.js",
-        "server:prod:mac": "export NODE_ENV=production && node server.js"
+        "server:prod:mac": "export NODE_ENV=production && node server.js",
+        "start:migrate": "RUN_MIGRATIONS=true node server.js",
+        "migrate": "node -e \"import('./migrations/0001-add-home-location.js').then(m => m.runMigration())\""
     },
     "author": "Me",
     "license": "ISC",

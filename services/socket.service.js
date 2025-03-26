@@ -338,6 +338,31 @@ async function _printSockets() {
 function _printSocket(socket) {
     console.log(`Socket - socketId: ${socket.id} userId: ${socket.userId}`)
 }
+async function sendGeofenceAlert(userId, distance) {
+    try {
+      const socket = _getUserSocket(userId);
+      if (!socket) {
+        logger.warn(`No active socket for user ${userId} - geofence alert not sent`);
+        return false;
+      }
+  
+      const alertData = {
+        userId,
+        message: 'יצאת מהאזור המותר!',
+        distance: distance.toFixed(1),
+        timestamp: new Date(),
+        severity: distance > 1000 ? 'high' : 'medium' // דוגמה לסיווג לפי מרחק
+      };
+  
+      socket.emit('geofence-alert', alertData);
+      logger.info(`Geofence alert sent to user ${userId}, distance: ${distance}m`);
+      
+      return true;
+    } catch (err) {
+      logger.error(`Failed to send geofence alert to user ${userId}`, err);
+      return false;
+    }
+  }
 
 export const socketService = {
     // set up the sockets service and define the API
@@ -349,4 +374,6 @@ export const socketService = {
     // Send to all sockets BUT not the current socket - if found
     // (otherwise broadcast to a room / to all)
     broadcast,
+
+    sendGeofenceAlert,
 }

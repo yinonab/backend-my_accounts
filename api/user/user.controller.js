@@ -12,6 +12,22 @@ export async function getUser(req, res) {
     }
 }
 
+export async function setHome(req, res) {
+    try {
+        const { id } = req.params;
+        const { lat, lng } = req.body;
+    
+        await dbService.getCollection('user').updateOne(
+          { _id: id },
+          { $set: { homeLocation: { lat, lng } } }
+        );
+    
+        res.json({ success: true });
+      } catch (err) {
+        res.status(500).json({ error: err.message });
+      }
+}
+
 export async function getUsers(req, res) {
     try {
         const filterBy = {

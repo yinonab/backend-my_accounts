@@ -14,6 +14,7 @@ console.log('VAPID_PRIVATE_KEY:', process.env.VAPID_PRIVATE_KEY);
 console.log('VAPID_CONTACT:', process.env.VAPID_CONTACT);
 
 import { authRoutes } from './api/auth/auth.routes.js';
+import { runMigration } from './migrations/0001-add-home-location.js'
 import { userRoutes } from './api/user/user.routes.js';
 import { reviewRoutes } from './api/review/review.routes.js';
 import { contactRoutes } from './api/contact/contact.routes.js';
@@ -182,10 +183,42 @@ app.post('/api/upload', upload.single('image'), (req, res) => {
         res.status(500).json({ error: 'Image upload failed', details: error.message });
     }
 });
+// Initialize and start the server
+async function startServerWithMigrations() {
+    try {
+      // שלב 1: הרצת מיגרציות - תמיד לפני הפעלת השרת
+      logger.info('Starting database migrations...')
+      await runMigration()
+      logger.info('Database migrations completed successfully')
+  
+      // שלב 2: הפעלת השרת
+      server.listen(port, '0.0.0.0', () => {
+        logger.info(`🚀 Server is running on port: ${port}`)
+        
+        // ניתן להוסיף כאן בדיקות נוספות לאחר עליית השרת
+        logger.info('Server is fully operational')
+      })
+  
+    } catch (err) {
+      logger.error('Server startup failed:', err)
+      
+      // במקרה של שגיאת מיגרציה קשה - תעצור את האפליקציה
+      if (err.message.includes('Migration failed')) {
+        logger.error('Critical migration error - shutting down')
+        process.exit(1)
+      }
+      
+      // שגיאות אחרות - אפשר להמשיך בהתאם לצורך
+      logger.warn('Proceeding with server despite non-critical errors')
+    }
+  }
+  
+  // הפעלת השרת עם מיגרציות
+  startServerWithMigrations()
 // Start the server
-server.listen(port, '0.0.0.0', () => {
-    console.log(`🚀 Server is running on port: ${port}`);
-});
+// server.listen(port, '0.0.0.0', () => {
+//     console.log(`🚀 Server is running on port: ${port}`);
+// });
 
 
 

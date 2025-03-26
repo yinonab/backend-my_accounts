@@ -120,6 +120,30 @@ async function saveSubscription(token, userId) {
     }
 }
 
+async function sendGeofenceAlert(userId, distance, currentLocation) {
+    const payload = {
+        title: 'אזהרת מיקום',
+        body: `יצאת מהאזור המותר במרחק ${distance.toFixed(1)} מטרים`,
+        type: 'geofence',
+        data: {
+            alertType: 'geofence',
+            severity: distance > 1000 ? 'high' : 'medium',
+            coordinates: JSON.stringify(currentLocation),
+            timestamp: new Date().toISOString(),
+            click_action: "FLUTTER_NOTIFICATION_CLICK"
+        },
+        androidChannel: 'location_alerts',
+        sound: 'alert_sound.wav'
+    };
+
+    // שליחה דרך FCM
+    const fcmResult = await sendNotification(userId, payload);
+    
+    // אפשר להוסיף כאן שליחה דרך ערוצים נוספים (דוא"ל, SMS וכו')
+    
+    return fcmResult;
+}
+
 async function sendNotification(userId, payload) {
     console.log("🎯 [4] Entered sendNotification function");
     console.log("📤 Payload received:", JSON.stringify(payload));
@@ -335,6 +359,24 @@ async function sendNotification(userId, payload) {
         };
     }
 }
+if (payload.type === 'geofence') {
+    message.android.notification = {
+        ...message.android.notification,
+        priority: 'max',
+        visibility: 'public',
+        vibrate_timings: ["1s", "1s", "1s"],
+        light_settings: {
+            color: '#FF0000',
+            light_on_duration: '2s',
+            light_off_duration: '1s'
+        },
+        channel_id: 'critical_alerts'
+    };
+
+    message.apns.headers['apns-push-type'] = 'critical';
+    message.apns.headers['apns-priority'] = '10';
+    message.apns.headers['apns-topic'] = 'com.your.app.emergency';
+}
 
 // async function removeSubscription(userId) {
 //     console.log(`🗑️ Attempting to remove subscription for user: ${userId}`);
@@ -378,6 +420,7 @@ async function removeSubscription(userId) {
 export const notificationService = {
     saveSubscription,
     sendNotification,
+    sendGeofenceAlert,
     removeSubscription,
     createIndexes
 };
