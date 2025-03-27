@@ -1,18 +1,15 @@
-//const admin = require("firebase-admin");
 import { notificationService } from "../services/notification.service.js";
-
-//import admin from "firebase-admin";
 
 // הגדרת אזור בטוח
 const SAFE_ZONE = {
-    lat: 40.7128,
-    lng: -74.0060,
-    radius: 0.001
+    lat: 40.7128, // קו רוחב של ניו יורק
+    lng: -74.0060, // קו אורך של ניו יורק
+    radius: 0.001 // רדיוס של 1 מטר (אם ברצונך להשתמש במטרים)
 };
 
 // פונקציה לחישוב המרחק בין שתי נקודות
 function getDistance(lat1, lon1, lat2, lon2) {
-    const R = 6371;
+    const R = 6371; // רדיוס כדור הארץ בקילומטרים
     const dLat = (lat2 - lat1) * Math.PI / 180;
     const dLon = (lon2 - lon1) * Math.PI / 180;
     const a =
@@ -20,23 +17,39 @@ function getDistance(lat1, lon1, lat2, lon2) {
         Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
         (1 - Math.cos(dLon)) / 2;
 
-    return R * 2 * Math.asin(Math.sqrt(a));
+    return R * 2 * Math.asin(Math.sqrt(a)); // המרחק בקילומטרים
 }
 
-// בדיקה אם המשתמש יצא מהאזור המוגדר
-async function checkUserLocation(userId, userLat, userLng, userToken) {
-    const distance = getDistance(userLat, userLng, SAFE_ZONE.lat, SAFE_ZONE.lng);
+// פונקציה אחת שמבצעת את בדיקת המיקום ושליחת ההתראה אם המשתמש יצא מהאזור
+export default async function updateUserLocation(userId, lat, lng, token) {
+    const distance = getDistance(lat, lng, SAFE_ZONE.lat, SAFE_ZONE.lng);
     console.log(`🔍 User ${userId} נמצא ${distance.toFixed(3)} ק"מ מהאזור המוגדר.`);
 
+    // אם המשתמש יצא מהאזור המוגדר
     if (distance > SAFE_ZONE.radius) {
         console.log(`🚨 User ${userId} יצא מהאזור! שולח התראה...`);
 
         try {
-            const response = await notificationService.sendNotification(userId, {       
+            // נתוני ההתראה
+            console.log('Sending notification with the following data: ', {
                 title: "התראה גיאוגרפית!",
                 body: "יצאת מהאזור המוגדר!",
                 type: "geo-alert",
-                token: userToken,  
+                token: token,
+                data: {
+                    eventType: "geo-alert",
+                    click_action: "FLUTTER_NOTIFICATION_CLICK"
+                },
+                androidChannel: "high_importance_channel",
+                priority: "high"
+            });
+
+            // שליחה של ההתראה
+            const response = await notificationService.sendNotification(userId, {
+                title: "התראה גיאוגרפית!",
+                body: "יצאת מהאזור המוגדר!",
+                type: "geo-alert",
+                token: token,
                 data: {
                     eventType: "geo-alert",
                     click_action: "FLUTTER_NOTIFICATION_CLICK"
@@ -49,17 +62,9 @@ async function checkUserLocation(userId, userLat, userLng, userToken) {
         } catch (error) {
             console.error("❌ שגיאה בשליחת התראה:", error);
         }
+    } else {
+        console.log(`✅ User ${userId} נמצא בתוך האזור הבטוח, אין צורך לשלוח התראה.`);
     }
-}
 
-// פונקציה שמקבלת את מיקום המשתמש, מבצעת בדיקה ושולחת התראה אם צריך
-export async function updateUserLocation(userId, lat, lng, token) {
-    await checkUserLocation(userId, parseFloat(lat), parseFloat(lng), token);
+    return { success: true }; // חזרה עם הצלחה
 }
-// ייצוא הפונקציה כערך ברירת מחדל
-export default {
-    async updateUserLocation(userId, lat, lng, token) {
-        console.log(`Updating location for user ${userId} at ${lat}, ${lng} with token ${token}`);
-        return { success: true };
-    }
-};
