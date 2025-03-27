@@ -5,9 +5,9 @@ import { notificationService } from "../services/notification.service.js";
 
 // הגדרת אזור בטוח
 const SAFE_ZONE = {
-    lat: 32.0853,
-    lng: 34.7818,
-    radius: 0.5
+    lat: 40.7128,
+    lng: -74.0060,
+    radius: 0.001
 };
 
 // פונקציה לחישוב המרחק בין שתי נקודות
