@@ -25,12 +25,11 @@ export default async function updateUserLocation(userId, lat, lng, token) {
     const distance = getDistance(lat, lng, SAFE_ZONE.lat, SAFE_ZONE.lng);
     console.log(`🔍 User ${userId} נמצא ${distance.toFixed(3)} ק"מ מהאזור המוגדר.`);
 
-    // אם המשתמש יצא מהאזור המוגדר
     if (distance > SAFE_ZONE.radius) {
         console.log(`🚨 User ${userId} יצא מהאזור! שולח התראה...`);
 
         try {
-            // נתוני ההתראה
+            // השארתי את הלוג המפורט שלך
             console.log('Sending notification with the following data: ', {
                 title: "התראה גיאוגרפית!",
                 body: "יצאת מהאזור המוגדר!",
@@ -44,7 +43,6 @@ export default async function updateUserLocation(userId, lat, lng, token) {
                 priority: "high"
             });
 
-            // שליחה של ההתראה
             const response = await notificationService.sendNotification(userId, {
                 title: "התראה גיאוגרפית!",
                 body: "יצאת מהאזור המוגדר!",
@@ -61,10 +59,12 @@ export default async function updateUserLocation(userId, lat, lng, token) {
             console.log("✅ התראה נשלחה בהצלחה:", response);
         } catch (error) {
             console.error("❌ שגיאה בשליחת התראה:", error);
+            // חשוב: לא זורקים שגיאה החוצה, רק מדפיסים וממשיכים
         }
     } else {
         console.log(`✅ User ${userId} נמצא בתוך האזור הבטוח, אין צורך לשלוח התראה.`);
     }
 
-    return { success: true }; // חזרה עם הצלחה
+    return { success: true }; // תמיד מחזיר הצלחה
 }
+
