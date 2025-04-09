@@ -21,7 +21,7 @@ function getDistance(lat1, lon1, lat2, lon2) {
 }
 
 // פונקציה אחת שמבצעת את בדיקת המיקום ושליחת ההתראה אם המשתמש יצא מהאזור
-export default async function updateUserLocation(userId, lat, lng, token) {
+async function updateUserLocation(userId, lat, lng, token) {
     const distance = getDistance(lat, lng, SAFE_ZONE.lat, SAFE_ZONE.lng);
     console.log(`🔍 User ${userId} נמצא ${distance.toFixed(3)} ק"מ מהאזור המוגדר.`);
 
@@ -67,4 +67,7 @@ export default async function updateUserLocation(userId, lat, lng, token) {
 
     return { success: true }; // תמיד מחזיר הצלחה
 }
+export default {
+    updateUserLocation,
+};
 
