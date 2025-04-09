@@ -120,9 +120,226 @@ async function saveSubscription(token, userId) {
     }
 }
 
+// async function sendNotification(userId, payload) {
+//     console.log("🎯 [4] Entered sendNotification function");
+//     console.log("📤 Payload received:", JSON.stringify(payload));
+//     const defaultIcon = "https://res.cloudinary.com/dzqnyehxn/image/upload/v1739858070/belll_fes617.png";
+//     const messageId = payload.id || `msg_${Date.now()}`;
+//     const isSilent = payload.type === "keep-alive";
+
+//     console.log('🚀 Initiating HIGH PRIORITY notification:', {
+//         messageId,
+//         userId,
+//         isSilent,
+//         payloadSummary: {
+//             title: payload.title,
+//             body: payload.body?.substring(0, 50) + (payload.body?.length > 50 ? '...' : ''),
+//             type: payload.type || 'regular'
+//         }
+//     });
+
+//     try {
+//         const collection = await dbService.getCollection(COLLECTION_NAME);
+//         const userSubscription = await collection.findOne({ userId });
+
+//         if (!userSubscription?.token) {
+//             console.error('❌ [FCM-ERROR] No valid token for user', {
+//                 userId,
+//                 errorType: 'MISSING_TOKEN',
+//                 severity: 'HIGH',
+//                 solution: 'Verify user registration flow'
+//             });
+//             return { success: false, error: 'MISSING_TOKEN' };
+//         }
+
+//         // בניית הודעת FCM עם שדות כסטרינג
+//         const message = {
+//             token: userSubscription.token,
+//             data: {
+//                 ...payload.data,
+//                 title: String(payload.title || ''),
+//                 body: String(payload.body || ''),
+//                 icon: String(payload.icon || defaultIcon),
+//                 badge: payload.badge || defaultIcon,
+//                 sound: payload.sound || 'default',
+//                 type: payload.type || 'regular',
+//                 silent: String(!!payload.silent),
+//                 wakeUpApp: "true",
+//                 requireInteraction: String(!!payload.requireInteraction),
+//                 click_action: "FLUTTER_NOTIFICATION_CLICK",
+//                 timestamp: Date.now().toString(),
+//                 messageId,
+//                 urgent: "true",
+//                 // הוספת השדות הבעייתיים כסטרינג JSON
+//                 android_notification_config: JSON.stringify({
+//                     channel_id: payload.androidChannel || 'high_importance_channel',
+//                     priority: "high",
+//                     visibility: "public",
+//                     vibrate_timings: ["100ms", "200ms", "100ms"],
+//                     light_settings: {
+//                         color: '#FF0000',
+//                         light_on_duration: '1000ms',
+//                         light_off_duration: '1000ms'
+//                     }
+//                 })
+//             },
+//             android: {
+//                 priority: "high",
+//                 ttl: 3600,
+//                 notification: isSilent ? undefined : {
+//                     title: String(payload.title),
+//                     body: String(payload.body),
+//                     sound: payload.sound || 'default',
+//                     visibility: 'public',
+//                     channel_id: payload.androidChannel || 'high_importance_channel',
+//                     icon: 'notification_icon',
+//                     color: '#FF0000',
+//                     tag: payload.tag || messageId,
+//                     priority: 'high',// שינוי מ-PRIORITY_HIGH ל-high
+//                     vibrate_timings: ["0.5s", "0.8s", "0.5s"], // דפוס ויברציה
+//                     light_settings: {
+//                     color: {
+//                         red: 255,
+//                         green: 0,
+//                         blue: 0
+//                     },
+//                     light_on_duration: "1s",
+//                     light_off_duration: "1s"
+//                     },
+//                     default_vibrate_timings: true, // שימוש בברירת מחדל אם לא מוגדר
+//                     default_light_settings: true, // שימוש בברירת מחדל אם לא מוגדר
+//                     default_sound: true, // שימוש בצליל ברירת מחדל
+//                     notification_count: 1, // ספירת התראות
+//                 }
+//             },
+//             apns: {
+//                 headers: {
+//                     'apns-priority': '10',
+//                     'apns-push-type': isSilent ? 'background' : 'alert',
+//                     'apns-collapse-id': messageId
+//                 },
+//                 payload: {
+//                     aps: {
+//                         sound: payload.sound || 'default',
+//                         badge: payload.badgeCount || 1,
+//                         'content-available': 1,
+//                         mutableContent: 1,
+//                         alert: {
+//                             title: payload.title,
+//                             body: payload.body
+//                         }
+//                     }
+//                 }
+//             },
+//             fcmOptions: {
+//                 analyticsLabel: payload.type || 'high_priority'
+//             },
+//             webpush: {
+//                 headers: {
+//                     Urgency: 'high',
+//                     TTL: '3600'
+//                 }
+//             }
+//         };
+
+//         console.log('📨 Constructed HIGH PRIORITY FCM message:', {
+//             messageId,
+//             androidPriority: message.android.priority,
+//             apnsPriority: message.apns.headers['apns-priority'],
+//             ttlSeconds: message.android.ttl,
+//             containsNotification: !!message.android.notification
+//         });
+
+//         const TIMEOUT = 15000;
+//         const sendPromise = admin.messaging().send(message);
+//         const timeoutPromise = new Promise((_, reject) => {
+//             setTimeout(() => reject(new Error('FCM_TIMEOUT')), TIMEOUT);
+//         });
+
+//         const response = await Promise.race([sendPromise, timeoutPromise]);
+
+//         console.log('✅ [FCM-HIGH-PRIORITY-SUCCESS] Notification delivered', {
+//             messageId,
+//             userId,
+//             fcmMessageId: response.messageId,
+//             deliveryTime: new Date().toISOString(),
+//             deviceState: 'ACTIVE'
+//         });
+
+//         return {
+//             success: true,
+//             messageId: response.messageId,
+//             fcmResponse: response
+//         };
+
+//     } catch (error) {
+//         let errorType = 'UNKNOWN_ERROR';
+//         let severity = 'CRITICAL';
+//         let solution = 'Immediate attention required';
+//         let deviceState = 'UNKNOWN';
+
+//         switch (error.code || error.message) {
+//             case 'messaging/invalid-registration-token':
+//             case 'messaging/registration-token-not-registered':
+//                 errorType = 'INVALID_TOKEN';
+//                 solution = 'Remove token and prompt user to re-register';
+//                 await removeSubscription(userId);
+//                 break;
+
+//             case 'messaging/quota-exceeded':
+//                 errorType = 'QUOTA_EXCEEDED';
+//                 solution = 'Immediately request quota increase in Firebase Console';
+//                 break;
+
+//             case 'FCM_TIMEOUT':
+//                 errorType = 'DELIVERY_TIMEOUT';
+//                 deviceState = 'DOZE_MODE_OR_OFFLINE';
+//                 solution = 'Device may be in Doze mode. Consider implementing foreground service';
+//                 break;
+
+//             case 'messaging/device-message-rate-exceeded':
+//                 errorType = 'RATE_LIMITED';
+//                 deviceState = 'THROTTLED';
+//                 solution = 'Critical notification was throttled. Review rate limits';
+//                 break;
+
+//             default:
+//                 errorType = error.code || 'UNSPECIFIED_ERROR';
+//         }
+
+//         console.error(`❌ [FCM-HIGH-PRIORITY-FAILURE] ${errorType}`, {
+//             messageId,
+//             userId,
+//             errorDetails: {
+//                 code: error.code,
+//                 message: error.message,
+//                 stack: error.stack?.split('\n')[0]
+//             },
+//             diagnosticInfo: {
+//                 errorType,
+//                 severity,
+//                 deviceState,
+//                 solution,
+//                 timestamp: new Date().toISOString(),
+//                 isHighPriority: true
+//             }
+//         });
+
+//         return {
+//             success: false,
+//             errorType,
+//             message: error.message,
+//             deviceState,
+//             solution,
+//             isHighPriority: true
+//         };
+//     }
+// }
+
 async function sendNotification(userId, payload) {
     console.log("🎯 [4] Entered sendNotification function");
     console.log("📤 Payload received:", JSON.stringify(payload));
+
     const defaultIcon = "https://res.cloudinary.com/dzqnyehxn/image/upload/v1739858070/belll_fes617.png";
     const messageId = payload.id || `msg_${Date.now()}`;
     const isSilent = payload.type === "keep-alive";
@@ -143,16 +360,10 @@ async function sendNotification(userId, payload) {
         const userSubscription = await collection.findOne({ userId });
 
         if (!userSubscription?.token) {
-            console.error('❌ [FCM-ERROR] No valid token for user', {
-                userId,
-                errorType: 'MISSING_TOKEN',
-                severity: 'HIGH',
-                solution: 'Verify user registration flow'
-            });
+            console.error('❌ [FCM-ERROR] No valid token for user', { userId });
             return { success: false, error: 'MISSING_TOKEN' };
         }
 
-        // בניית הודעת FCM עם שדות כסטרינג
         const message = {
             token: userSubscription.token,
             data: {
@@ -170,7 +381,6 @@ async function sendNotification(userId, payload) {
                 timestamp: Date.now().toString(),
                 messageId,
                 urgent: "true",
-                // הוספת השדות הבעייתיים כסטרינג JSON
                 android_notification_config: JSON.stringify({
                     channel_id: payload.androidChannel || 'high_importance_channel',
                     priority: "high",
@@ -186,7 +396,7 @@ async function sendNotification(userId, payload) {
             android: {
                 priority: "high",
                 ttl: 3600,
-                notification: isSilent ? undefined : {
+                notification: isSilent ? undefined : { // לא לשים notification אם זה silent
                     title: String(payload.title),
                     body: String(payload.body),
                     sound: payload.sound || 'default',
@@ -195,21 +405,17 @@ async function sendNotification(userId, payload) {
                     icon: 'notification_icon',
                     color: '#FF0000',
                     tag: payload.tag || messageId,
-                    priority: 'high',// שינוי מ-PRIORITY_HIGH ל-high
-                    vibrate_timings: ["0.5s", "0.8s", "0.5s"], // דפוס ויברציה
+                    priority: 'high',
+                    vibrate_timings: ["0.5s", "0.8s", "0.5s"],
                     light_settings: {
-                    color: {
-                        red: 255,
-                        green: 0,
-                        blue: 0
+                        color: { red: 255, green: 0, blue: 0 },
+                        light_on_duration: "1s",
+                        light_off_duration: "1s"
                     },
-                    light_on_duration: "1s",
-                    light_off_duration: "1s"
-                    },
-                    default_vibrate_timings: true, // שימוש בברירת מחדל אם לא מוגדר
-                    default_light_settings: true, // שימוש בברירת מחדל אם לא מוגדר
-                    default_sound: true, // שימוש בצליל ברירת מחדל
-                    notification_count: 1, // ספירת התראות
+                    default_vibrate_timings: true,
+                    default_light_settings: true,
+                    default_sound: true,
+                    notification_count: 1,
                 }
             },
             apns: {
@@ -224,30 +430,38 @@ async function sendNotification(userId, payload) {
                         badge: payload.badgeCount || 1,
                         'content-available': 1,
                         mutableContent: 1,
-                        alert: {
+                        alert: isSilent ? undefined : { // רק אם לא silent
                             title: payload.title,
                             body: payload.body
                         }
                     }
                 }
             },
-            fcmOptions: {
-                analyticsLabel: payload.type || 'high_priority'
-            },
             webpush: {
                 headers: {
                     Urgency: 'high',
                     TTL: '3600'
                 }
+            },
+            fcmOptions: {
+                analyticsLabel: payload.type || 'high_priority'
             }
         };
+
+        // ✅ הכי חשוב - שדה notification ברמה העליונה אם זה לא silent
+        if (!isSilent) {
+            message.notification = {
+                title: String(payload.title),
+                body: String(payload.body)
+            };
+        }
 
         console.log('📨 Constructed HIGH PRIORITY FCM message:', {
             messageId,
             androidPriority: message.android.priority,
             apnsPriority: message.apns.headers['apns-priority'],
             ttlSeconds: message.android.ttl,
-            containsNotification: !!message.android.notification
+            containsNotification: !!message.notification
         });
 
         const TIMEOUT = 15000;
@@ -273,68 +487,21 @@ async function sendNotification(userId, payload) {
         };
 
     } catch (error) {
-        let errorType = 'UNKNOWN_ERROR';
-        let severity = 'CRITICAL';
-        let solution = 'Immediate attention required';
-        let deviceState = 'UNKNOWN';
-
-        switch (error.code || error.message) {
-            case 'messaging/invalid-registration-token':
-            case 'messaging/registration-token-not-registered':
-                errorType = 'INVALID_TOKEN';
-                solution = 'Remove token and prompt user to re-register';
-                await removeSubscription(userId);
-                break;
-
-            case 'messaging/quota-exceeded':
-                errorType = 'QUOTA_EXCEEDED';
-                solution = 'Immediately request quota increase in Firebase Console';
-                break;
-
-            case 'FCM_TIMEOUT':
-                errorType = 'DELIVERY_TIMEOUT';
-                deviceState = 'DOZE_MODE_OR_OFFLINE';
-                solution = 'Device may be in Doze mode. Consider implementing foreground service';
-                break;
-
-            case 'messaging/device-message-rate-exceeded':
-                errorType = 'RATE_LIMITED';
-                deviceState = 'THROTTLED';
-                solution = 'Critical notification was throttled. Review rate limits';
-                break;
-
-            default:
-                errorType = error.code || 'UNSPECIFIED_ERROR';
-        }
-
-        console.error(`❌ [FCM-HIGH-PRIORITY-FAILURE] ${errorType}`, {
-            messageId,
-            userId,
+        console.error(`❌ [FCM-HIGH-PRIORITY-FAILURE]`, {
             errorDetails: {
                 code: error.code,
-                message: error.message,
-                stack: error.stack?.split('\n')[0]
-            },
-            diagnosticInfo: {
-                errorType,
-                severity,
-                deviceState,
-                solution,
-                timestamp: new Date().toISOString(),
-                isHighPriority: true
+                message: error.message
             }
         });
 
         return {
             success: false,
-            errorType,
-            message: error.message,
-            deviceState,
-            solution,
-            isHighPriority: true
+            errorType: error.code || 'UNKNOWN_ERROR',
+            message: error.message
         };
     }
 }
+
 
 // async function removeSubscription(userId) {
 //     console.log(`🗑️ Attempting to remove subscription for user: ${userId}`);
