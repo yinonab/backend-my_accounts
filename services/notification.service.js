@@ -366,11 +366,19 @@ async function sendNotification(userId, payload) {
 
         const message = {
             token: userSubscription.token,
+            priority: "high", // הוסף כאן עוד פעם לוודאות
+            notification: {
+                title: payload.title || "MyApp Notification",
+                body: payload.body || "You have a new message",
+                click_action: "FLUTTER_NOTIFICATION_CLICK",
+                sound: payload.sound || 'default',
+                icon: "notification_icon",
+            },
             data: {
                 ...payload.data,
-                title: String(payload.title || ''),
-                body: String(payload.body || ''),
-                icon: String(payload.icon || defaultIcon),
+                title: payload.title || '',
+                body: payload.body || '',
+                icon: payload.icon || defaultIcon,
                 badge: payload.badge || defaultIcon,
                 sound: payload.sound || 'default',
                 type: payload.type || 'regular',
@@ -380,25 +388,14 @@ async function sendNotification(userId, payload) {
                 click_action: "FLUTTER_NOTIFICATION_CLICK",
                 timestamp: Date.now().toString(),
                 messageId,
-                urgent: "true",
-                android_notification_config: JSON.stringify({
-                    channel_id: payload.androidChannel || 'high_importance_channel',
-                    priority: "high",
-                    visibility: "public",
-                    vibrate_timings: ["100ms", "200ms", "100ms"],
-                    light_settings: {
-                        color: '#FF0000',
-                        light_on_duration: '1000ms',
-                        light_off_duration: '1000ms'
-                    }
-                })
+                urgent: "true"
             },
             android: {
                 priority: "high",
                 ttl: 3600,
-                notification: isSilent ? undefined : { // לא לשים notification אם זה silent
-                    title: String(payload.title),
-                    body: String(payload.body),
+                notification: {
+                    title: payload.title || "Notification",
+                    body: payload.body || "You have a new message",
                     sound: payload.sound || 'default',
                     visibility: 'public',
                     channel_id: payload.androidChannel || 'high_importance_channel',
@@ -421,7 +418,7 @@ async function sendNotification(userId, payload) {
             apns: {
                 headers: {
                     'apns-priority': '10',
-                    'apns-push-type': isSilent ? 'background' : 'alert',
+                    'apns-push-type': 'alert',
                     'apns-collapse-id': messageId
                 },
                 payload: {
@@ -430,31 +427,15 @@ async function sendNotification(userId, payload) {
                         badge: payload.badgeCount || 1,
                         'content-available': 1,
                         mutableContent: 1,
-                        alert: isSilent ? undefined : { // רק אם לא silent
+                        alert: {
                             title: payload.title,
                             body: payload.body
                         }
                     }
                 }
-            },
-            webpush: {
-                headers: {
-                    Urgency: 'high',
-                    TTL: '3600'
-                }
-            },
-            fcmOptions: {
-                analyticsLabel: payload.type || 'high_priority'
             }
         };
-
-        // ✅ הכי חשוב - שדה notification ברמה העליונה אם זה לא silent
-        if (!isSilent) {
-            message.notification = {
-                title: String(payload.title),
-                body: String(payload.body)
-            };
-        }
+        
 
         console.log('📨 Constructed HIGH PRIORITY FCM message:', {
             messageId,
