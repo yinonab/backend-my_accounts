@@ -449,12 +449,12 @@ async function sendNotification(userId, payload) {
         };
 
         // ✅ הכי חשוב - שדה notification ברמה העליונה אם זה לא silent
-        if (!isSilent) {
+        // if (!isSilent) {
             message.notification = {
-                title: String(payload.title),
-                body: String(payload.body)
+                title: String(payload.title || "🔄 Keep Alive"),
+                body: String(payload.body || "Keeping app awake...")
             };
-        }
+        // }
 
         console.log('📨 Constructed HIGH PRIORITY FCM message:', {
             messageId,
