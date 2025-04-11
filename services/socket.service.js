@@ -31,13 +31,13 @@ export function setupSocketAPI(http) {
         socket.on('ping', () => {
             logger.info(`📡 Received ping from client [id: ${socket.id}]`);
 
-            if (!socket.userId) {
-                logger.warn(`⚠️ User is not authenticated, attempting to restore session...`);
-                socket.emit('set-user-socket', {
-                    userId: socket.userId,
-                    username: socket.username
-                });
-            }
+            // if (!socket.userId) {
+            //     logger.warn(`⚠️ User is not authenticated, attempting to restore session...`);
+            //     socket.emit('set-user-socket', {
+            //         userId: socket.userId,
+            //         username: socket.username
+            //     });
+            // }
 
             socket.emit('pong'); // מחזיר pong כדי לשמור על החיבור
         });
@@ -55,40 +55,40 @@ export function setupSocketAPI(http) {
         socket.on('disconnect', (reason) => {
             logger.warn(`❌ Socket disconnected [id: ${socket.id}], reason: ${reason}`);
         
-            if (socket.userId) {
-                // שלח פינג ללקוח במקרה של ניתוק, כדי לוודא שהחיבור פעיל
-                const targetSocket = _getUserSocket(socket.userId);
+            // if (socket.userId) {
+            //     // שלח פינג ללקוח במקרה של ניתוק, כדי לוודא שהחיבור פעיל
+            //     const targetSocket = _getUserSocket(socket.userId);
         
-                if (targetSocket) {
-                    targetSocket.emit('ping'); // שליחת פינג
-                    logger.info(`✅ שלח פינג ללקוח ${socket.userId} אחרי ניתוק`);
-                } else {
-                    logger.warn(`⚠️ לא מצאנו חיבור פעיל למחשב הלקוח ${socket.userId}`);
-                }
-                // נסה לחבר מחדש עד 5 פעמים
-                const maxRetryAttempts = 5; // מספר ניסיונות חיבור מחדש
-                let retryCount = 0; // סופר הניסיונות
-                const reconnectInterval = setInterval(() => {
-                    if (retryCount < maxRetryAttempts) {
-                        retryCount++;
-                        logger.info(`🔄 מנסה לחבר מחדש את המשתמש ${socket.userId} בפעם ${retryCount}...`);
+            //     if (targetSocket) {
+            //         targetSocket.emit('ping'); // שליחת פינג
+            //         logger.info(`✅ שלח פינג ללקוח ${socket.userId} אחרי ניתוק`);
+            //     } else {
+            //         logger.warn(`⚠️ לא מצאנו חיבור פעיל למחשב הלקוח ${socket.userId}`);
+            //     }
+            //     // נסה לחבר מחדש עד 5 פעמים
+            //     const maxRetryAttempts = 5; // מספר ניסיונות חיבור מחדש
+            //     let retryCount = 0; // סופר הניסיונות
+            //     const reconnectInterval = setInterval(() => {
+            //         if (retryCount < maxRetryAttempts) {
+            //             retryCount++;
+            //             logger.info(`🔄 מנסה לחבר מחדש את המשתמש ${socket.userId} בפעם ${retryCount}...`);
         
-                        const targetSocket = _getUserSocket(socket.userId);
-                        if (!targetSocket) { // רק אם אין כבר חיבור פעיל
-                            gIo.to(socket.id).emit('set-user-socket', {
-                                userId: socket.userId,
-                                username: socket.username
-                            });
-                            logger.info(`✅ שלח בקשה לחיבור מחדש עבור ${socket.userId}`);
-                        } else {
-                            logger.info(`🔵 למשתמש ${socket.userId} כבר יש חיבור פעיל, לא מחבר מחדש.`);
-                        }
-                    } else {
-                        clearInterval(reconnectInterval); // סיום הניסיונות אחרי 5 פעמים
-                        logger.warn(`⚠️ לא הצלחנו לחבר מחדש את ${socket.userId} אחרי ${maxRetryAttempts} ניסיונות.`);
-                    }
-                }, 250 * retryCount); // חיכוי בין ניסיונות, הזמן גדל עם כל ניסיון (למשל: 1 שניה, 2 שניות, 3 שניות וכו')
-            }
+            //             const targetSocket = _getUserSocket(socket.userId);
+            //             if (!targetSocket) { // רק אם אין כבר חיבור פעיל
+            //                 gIo.to(socket.id).emit('set-user-socket', {
+            //                     userId: socket.userId,
+            //                     username: socket.username
+            //                 });
+            //                 logger.info(`✅ שלח בקשה לחיבור מחדש עבור ${socket.userId}`);
+            //             } else {
+            //                 logger.info(`🔵 למשתמש ${socket.userId} כבר יש חיבור פעיל, לא מחבר מחדש.`);
+            //             }
+            //         } else {
+            //             clearInterval(reconnectInterval); // סיום הניסיונות אחרי 5 פעמים
+            //             logger.warn(`⚠️ לא הצלחנו לחבר מחדש את ${socket.userId} אחרי ${maxRetryAttempts} ניסיונות.`);
+            //         }
+            //     }, 250 * retryCount); // חיכוי בין ניסיונות, הזמן גדל עם כל ניסיון (למשל: 1 שניה, 2 שניות, 3 שניות וכו')
+            // }
         });
         
 
@@ -108,15 +108,15 @@ export function setupSocketAPI(http) {
         socket.on('connect', () => {
             logger.info(`🔄 Socket connected again [id: ${socket.id}]`);
 
-            if (socket.userId) {
-                logger.info(`✅ User ${socket.userId} is re-authenticating`);
-                socket.emit('set-user-socket', { userId: socket.userId, username: socket.username });
-            } else {
-                logger.warn(`⚠️ No userId found, attempting to restore session...`);
+            // if (socket.userId) {
+            //     logger.info(`✅ User ${socket.userId} is re-authenticating`);
+            //     socket.emit('set-user-socket', { userId: socket.userId, username: socket.username });
+            // } else {
+            //     logger.warn(`⚠️ No userId found, attempting to restore session...`);
 
-                // מנסה לשחזר את החיבור דרך Event יזום ללקוח
-                socket.emit('request-user-data');
-            }
+            //     // מנסה לשחזר את החיבור דרך Event יזום ללקוח
+            //     socket.emit('request-user-data');
+            // }
         });
         socket.on('typing', (data) => {
             const { toUserId, messageType } = data;
@@ -258,13 +258,13 @@ export function setupSocketAPI(http) {
             logger.info(`❤️‍🔥 Heartbeat received from [id: ${socket.id}]`);
         });
 
-        socket.on('connect', () => {
-            if (socket.userId) {
-                logger.info(`🔄 Re-authenticating socket with userId: ${socket.userId}`);
-            } else {
-                logger.warn(`⚠️ New socket connection without authentication. User must log in.`);
-            }
-        });
+        // socket.on('connect', () => {
+        //     if (socket.userId) {
+        //         logger.info(`🔄 Re-authenticating socket with userId: ${socket.userId}`);
+        //     } else {
+        //         logger.warn(`⚠️ New socket connection without authentication. User must log in.`);
+        //     }
+        // });
 
 
         socket.on('unset-user-socket', () => {
