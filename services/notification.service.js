@@ -396,7 +396,7 @@ async function sendNotification(userId, payload) {
             android: {
                 priority: "high",
                 ttl: 3600,
-                notification: isSilent ? undefined : { // לא לשים notification אם זה silent
+                notification: { // לא לשים notification אם זה silent
                     title: String(payload.title),
                     body: String(payload.body),
                     sound: payload.sound || 'default',
