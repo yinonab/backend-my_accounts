@@ -9,7 +9,7 @@ router.post('/login', login)
 router.post('/signup', signup)
 router.post('/facebook', facebookLogin)
 router.post('/logout', requireAuth, logout)
-router.get('/ping', ping)
+router.get('/ping',requireAuth, ping)
 
 
 export const authRoutes = router
