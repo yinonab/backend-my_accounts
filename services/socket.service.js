@@ -42,6 +42,24 @@ export function setupSocketAPI(http) {
             socket.emit('pong'); // מחזיר pong כדי לשמור על החיבור
         });
 
+        socket.on('user-ready', () => {
+            logger.info(`✅ [SERVER] User is ready! userId=${socket.userId}, socketId=${socket.id}`);
+        
+            if (!socket.userId) {
+                logger.warn(`⚠️ [SERVER] Cannot emit TEST_NOTIFICATION - userId is missing`);
+                return;
+            }
+        
+            emitTestNotification({
+                userId: socket.userId,
+                data: {
+                    title: "📢 Welcome!",
+                    body: "You are successfully connected and ready for notifications! 🚀"
+                }
+            });
+        });
+        
+
 
         socket.on('pong', () => {
             logger.info(`🏓 Pong received from client [id: ${socket.id}]`);
@@ -307,6 +325,10 @@ async function emitToUser({ type, data, userId }) {
 // }
 
 async function emitTestNotification({ userId, data, attempt = 1 }) {
+    if (!userId) {
+        logger.error(`❌ emitTestNotification called without userId!`);
+        return;
+    }
     userId = userId.toString();
     const socket = await _getUserSocket(userId);
 
