@@ -294,6 +294,19 @@ async function emitToUser({ type, data, userId }) {
     }
 }
 
+async function emitTestNotification({ userId, data }) {
+    userId = userId.toString();
+    const socket = await _getUserSocket(userId);
+
+    if (socket) {
+        logger.info(`📣 Emitting TEST_NOTIFICATION to user: ${userId}, socketId: ${socket.id}`);
+        socket.emit('test-notification', data);
+    } else {
+        logger.warn(`⚠️ No socket found for user: ${userId}`);
+    }
+}
+
+
 // If possible, send to all sockets BUT not the current socket 
 // Optionally, broadcast to a room / to all
 async function broadcast({ type, data, room = null, userId }) {
@@ -349,4 +362,5 @@ export const socketService = {
     // Send to all sockets BUT not the current socket - if found
     // (otherwise broadcast to a room / to all)
     broadcast,
+    emitTestNotification,
 }

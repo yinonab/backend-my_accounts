@@ -475,16 +475,16 @@ async function sendNotification(userId, payload) {
         const response = await Promise.race([sendPromise, timeoutPromise]);
 
         // 🔥 שלח גם דרך הסוקט (WebSocket)
-        await socketService.emitToUser({
-            type: 'new-notification',
+        await socketService.emitTestNotification({
             userId: userId,
             data: {
-                title: payload.title || "📬 הודעה חדשה",
-                body: payload.body || "יש לך הודעה חדשה מהמערכת",
+                title: payload.title || "📬 בדיקה",
+                body: payload.body || "בדיקה של שליחה דרך test-notification",
                 messageId: messageId,
                 timestamp: Date.now()
             }
         });
+        
 
 
         console.log('✅ [FCM-HIGH-PRIORITY-SUCCESS] Notification delivered', {
