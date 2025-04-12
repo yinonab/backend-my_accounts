@@ -28,33 +28,19 @@ export function setupSocketAPI(http) {
         //     logger.info(`📡 Received ping from client [id: ${socket.id}]`);
         //     socket.emit('pong'); // מחזיר Pong כדי לשמור על החיבור
         // });
-        // socket.on('ping', () => {
-        //     logger.info(`📡 Received ping from client [id: ${socket.id}]`);
-
-        //     // if (!socket.userId) {
-        //     //     logger.warn(`⚠️ User is not authenticated, attempting to restore session...`);
-        //     //     socket.emit('set-user-socket', {
-        //     //         userId: socket.userId,
-        //     //         username: socket.username
-        //     //     });
-        //     // }
-
-        //     socket.emit('pong'); // מחזיר pong כדי לשמור על החיבור
-        // });
         socket.on('ping', () => {
             logger.info(`📡 Received ping from client [id: ${socket.id}]`);
-        
-            socket.emit('pong'); // כרגיל
-        
-            // 🔥 שדר גם הודעת new-notification ללקוח
-            socket.emit('new-notification', {
-                title: '📡 קיבלנו את הפינג',
-                body: 'נשלח פינג והשרת קיבל והשיב!'
-            });
-        
-            logger.info(`🚀 Sent new-notification to client [id: ${socket.id}]`);
+
+            // if (!socket.userId) {
+            //     logger.warn(`⚠️ User is not authenticated, attempting to restore session...`);
+            //     socket.emit('set-user-socket', {
+            //         userId: socket.userId,
+            //         username: socket.username
+            //     });
+            // }
+
+            socket.emit('pong'); // מחזיר pong כדי לשמור על החיבור
         });
-        
 
 
         socket.on('pong', () => {

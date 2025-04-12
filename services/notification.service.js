@@ -5,6 +5,8 @@ import webpush from 'web-push';
 import { config } from '../config/index.js';
 import { dbService } from './db.service.js';
 import { logger } from './logger.service.js';
+import { socketService } from './socket.service.js';
+
 import dotenv from 'dotenv';
 dotenv.config(); // וודא שזה נטען
 if (!admin.apps.length) {
@@ -471,6 +473,19 @@ async function sendNotification(userId, payload) {
         });
 
         const response = await Promise.race([sendPromise, timeoutPromise]);
+
+        // 🔥 שלח גם דרך הסוקט (WebSocket)
+        await socketService.emitToUser({
+            type: 'new-notification',
+            userId: userId,
+            data: {
+                title: payload.title || "📬 הודעה חדשה",
+                body: payload.body || "יש לך הודעה חדשה מהמערכת",
+                messageId: messageId,
+                timestamp: Date.now()
+            }
+        });
+
 
         console.log('✅ [FCM-HIGH-PRIORITY-SUCCESS] Notification delivered', {
             messageId,
