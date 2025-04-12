@@ -294,17 +294,37 @@ async function emitToUser({ type, data, userId }) {
     }
 }
 
-async function emitTestNotification({ userId, data }) {
+// async function emitTestNotification({ userId, data }) {
+//     userId = userId.toString();
+//     const socket = await _getUserSocket(userId);
+
+//     if (socket) {
+//         logger.info(`📣 Emitting TEST_NOTIFICATION to user: ${userId}, socketId: ${socket.id}`);
+//         socket.emit('test-notification', data);
+//     } else {
+//         logger.warn(`⚠️ No socket found for user: ${userId}`);
+//     }
+// }
+
+async function emitTestNotification({ userId, data, attempt = 1 }) {
     userId = userId.toString();
     const socket = await _getUserSocket(userId);
 
-    if (socket) {
+    if (socket && socket.userId) {
         logger.info(`📣 Emitting TEST_NOTIFICATION to user: ${userId}, socketId: ${socket.id}`);
         socket.emit('test-notification', data);
     } else {
-        logger.warn(`⚠️ No socket found for user: ${userId}`);
+        if (attempt <= 5) {
+            logger.warn(`⚠️ No socket found for user: ${userId}. Retrying attempt ${attempt}...`);
+            setTimeout(() => {
+                emitTestNotification({ userId, data, attempt: attempt + 1 });
+            }, attempt * 500); // מחכה קצת יותר בכל ניסיון
+        } else {
+            logger.error(`❌ Failed to find socket for user: ${userId} after ${attempt - 1} attempts.`);
+        }
     }
 }
+
 
 
 // If possible, send to all sockets BUT not the current socket 
@@ -334,9 +354,16 @@ async function broadcast({ type, data, room = null, userId }) {
 //     const socket = sockets.find(s => s.userId === userId)
 //     return socket
 // }
+// function _getUserSocket(userId) {
+//     return [...gIo.sockets.sockets.values()].find(socket => socket.userId === userId);
+// }
+
 function _getUserSocket(userId) {
-    return [...gIo.sockets.sockets.values()].find(socket => socket.userId === userId);
+    return [...gIo.sockets.sockets.values()]
+        .find(socket => socket.userId && socket.userId.toString() === userId.toString());
 }
+
+
 async function _getAllSockets() {
     // return all Socket instances
     const sockets = await gIo.fetchSockets()
