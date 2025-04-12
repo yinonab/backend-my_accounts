@@ -324,25 +324,56 @@ async function emitToUser({ type, data, userId }) {
 //     }
 // }
 
+// async function emitTestNotification({ userId, data, attempt = 1 }) {
+//     if (!userId) {
+//         logger.error(`❌ emitTestNotification called without userId!`);
+//         return;
+//     }
+//     userId = userId.toString();
+//     const socket = await _getUserSocket(userId);
+
+//     if (socket && socket.userId) {
+//         logger.info(`📣 Emitting TEST_NOTIFICATION to user: ${userId}, socketId: ${socket.id}`);
+//         socket.emit('test-notification', data);
+//     } else {
+//         if (attempt <= 5) {
+//             logger.warn(`⚠️ No socket found for user: ${userId}. Retrying attempt ${attempt}...`);
+//             setTimeout(() => {
+//                 emitTestNotification({ userId, data, attempt: attempt + 1 });
+//             }, attempt * 500); // מחכה קצת יותר בכל ניסיון
+//         } else {
+//             logger.error(`❌ Failed to find socket for user: ${userId} after ${attempt - 1} attempts.`);
+//         }
+//     }
+// }
+
+
 async function emitTestNotification({ userId, data, attempt = 1 }) {
     if (!userId) {
         logger.error(`❌ emitTestNotification called without userId!`);
         return;
     }
+
     userId = userId.toString();
     const socket = await _getUserSocket(userId);
 
-    if (socket && socket.userId) {
+    if (!socket) {
+        logger.warn(`⚠️ No socket found for user: ${userId}. Attempt ${attempt}`);
+    } else {
+        logger.info(`🔍 Found socket for user: ${userId} (socketId=${socket.id}, connected=${socket.connected})`);
+    }
+
+    if (socket && socket.connected) {
         logger.info(`📣 Emitting TEST_NOTIFICATION to user: ${userId}, socketId: ${socket.id}`);
         socket.emit('test-notification', data);
     } else {
         if (attempt <= 5) {
-            logger.warn(`⚠️ No socket found for user: ${userId}. Retrying attempt ${attempt}...`);
+            logger.warn(`⏳ Retrying to find active socket for user: ${userId}. Attempt ${attempt}`);
             setTimeout(() => {
                 emitTestNotification({ userId, data, attempt: attempt + 1 });
-            }, attempt * 500); // מחכה קצת יותר בכל ניסיון
+            }, attempt * 500); // Exponential backoff
         } else {
-            logger.error(`❌ Failed to find socket for user: ${userId} after ${attempt - 1} attempts.`);
+            logger.error(`❌ Failed to find active socket for user: ${userId} after ${attempt - 1} attempts.`);
         }
     }
 }
