@@ -2,6 +2,8 @@ import { logger } from './logger.service.js'
 import { Server } from 'socket.io'
 
 var gIo = null
+const gReadyUsers = new Set();
+
 
 export function setupSocketAPI(http) {
     gIo = new Server(http, {
@@ -43,18 +45,19 @@ export function setupSocketAPI(http) {
         });
 
         socket.on('user-ready', () => {
-            if (socket.isUserReady) {
-                logger.warn(`⚠️ [SERVER] user-ready event received but user is already ready. Ignoring.`);
-                return;
-            }
-            socket.isUserReady = true;
-        
-            logger.info(`✅ [SERVER] User is ready! userId=${socket.userId}, socketId=${socket.id}`);
-            
             if (!socket.userId) {
                 logger.warn(`⚠️ [SERVER] Cannot emit TEST_NOTIFICATION - userId is missing`);
                 return;
             }
+        
+            if (gReadyUsers.has(socket.userId)) {
+                logger.warn(`⚠️ [SERVER] userId ${socket.userId} is already ready. Ignoring.`);
+                return;
+            }
+        
+            gReadyUsers.add(socket.userId); // ✨ שומרים שהיוזר הזה כבר מוכן
+        
+            logger.info(`✅ [SERVER] User is ready! userId=${socket.userId}, socketId=${socket.id}`);
         
             emitTestNotification({
                 userId: socket.userId,
@@ -64,6 +67,7 @@ export function setupSocketAPI(http) {
                 }
             });
         });
+        
         
         
 
@@ -79,6 +83,11 @@ export function setupSocketAPI(http) {
         
         socket.on('disconnect', (reason) => {
             logger.warn(`❌ Socket disconnected [id: ${socket.id}], reason: ${reason}`);
+
+            if (socket.userId) {
+                gReadyUsers.delete(socket.userId);
+                logger.info(`🧹 Removed userId ${socket.userId} from ready users after disconnect`);
+            }
         
             // if (socket.userId) {
             //     // שלח פינג ללקוח במקרה של ניתוק, כדי לוודא שהחיבור פעיל
