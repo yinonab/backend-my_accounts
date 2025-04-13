@@ -43,8 +43,14 @@ export function setupSocketAPI(http) {
         });
 
         socket.on('user-ready', () => {
-            logger.info(`✅ [SERVER] User is ready! userId=${socket.userId}, socketId=${socket.id}`);
+            if (socket.isUserReady) {
+                logger.warn(`⚠️ [SERVER] user-ready event received but user is already ready. Ignoring.`);
+                return;
+            }
+            socket.isUserReady = true;
         
+            logger.info(`✅ [SERVER] User is ready! userId=${socket.userId}, socketId=${socket.id}`);
+            
             if (!socket.userId) {
                 logger.warn(`⚠️ [SERVER] Cannot emit TEST_NOTIFICATION - userId is missing`);
                 return;
@@ -58,6 +64,7 @@ export function setupSocketAPI(http) {
                 }
             });
         });
+        
         
 
 
@@ -269,7 +276,15 @@ export function setupSocketAPI(http) {
                 logger.warn(`⚠️ Another socket exists for user ${userId}. Disconnecting old socket...`);
         
                 try {
-                    existingSocket.disconnect(); // סוגר את החיבור הישן
+                    existingSocket.disconnect();
+                    setTimeout(() => {
+                        if (existingSocket.connected) {
+                            logger.warn(`⚠️ Old socket for user ${userId} still connected after disconnect, force closing...`);
+                            existingSocket.disconnect(true);
+                        }
+                    }, 500);                    
+                    
+                    // סוגר את החיבור הישן
                 } catch (err) {
                     logger.error(`❌ Error disconnecting existing socket for user ${userId}:`, err);
                 }
