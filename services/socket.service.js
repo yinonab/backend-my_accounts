@@ -255,16 +255,33 @@ export function setupSocketAPI(http) {
             socket.join('watching:' + userId)
         })
         //Auth
-        socket.on('set-user-socket', (userData) => {
+        socket.on('set-user-socket', async (userData) => {
             const { userId, username } = userData;
             if (!userId) {
                 logger.warn(`⚠️ Invalid userId received for socket authentication.`);
                 return;
             }
-            logger.info(`✅ Setting socket.userId = ${userId} and socket.username = ${username} for socket [id: ${socket.id}]`);
+        
+            // קודם כל נבדוק אם כבר יש סוקט למשתמש הזה
+            const existingSocket = _getUserSocket(userId);
+        
+            if (existingSocket && existingSocket.id !== socket.id) {
+                logger.warn(`⚠️ Another socket exists for user ${userId}. Disconnecting old socket...`);
+        
+                try {
+                    existingSocket.disconnect(); // סוגר את החיבור הישן
+                } catch (err) {
+                    logger.error(`❌ Error disconnecting existing socket for user ${userId}:`, err);
+                }
+            }
+        
+            // עכשיו מקשרים את הסוקט החדש
             socket.userId = userId;
             socket.username = username;
+        
+            logger.info(`✅ Setting socket.userId = ${userId} and socket.username = ${username} for socket [id: ${socket.id}]`);
         });
+        
         // האזנה לאירוע Keep Alive מהלקוח
         socket.on('ping', () => {
             logger.info(`📡 Received ping from client [id: ${socket.id}]`);
