@@ -50,8 +50,11 @@ export function setupSocketAPI(http) {
                 return;
             }
         
-            if (gReadyUsers.has(socket.userId)) {
-                logger.warn(`⚠️ [SERVER] userId ${socket.userId} is already ready. Ignoring.`);
+            // בודקים אם יש כבר סוקט פעיל למשתמש הזה
+            const existingSocket = _getUserSocket(socket.userId);
+        
+            if (gReadyUsers.has(socket.userId) && existingSocket && existingSocket.connected) {
+                logger.warn(`⚠️ [SERVER] userId ${socket.userId} is already ready and connected. Ignoring user-ready.`);
                 return;
             }
         
@@ -67,6 +70,7 @@ export function setupSocketAPI(http) {
                 }
             });
         });
+        
         
         
         
