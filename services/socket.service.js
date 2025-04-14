@@ -284,24 +284,36 @@ export function setupSocketAPI(http) {
         
             // קודם כל נבדוק אם כבר יש סוקט למשתמש הזה
             const existingSocket = _getUserSocket(userId);
-        
+
             if (existingSocket && existingSocket.id !== socket.id) {
                 logger.warn(`⚠️ Another socket exists for user ${userId}. Disconnecting old socket...`);
         
                 try {
-                    await existingSocket.disconnect().catch(err => logger.error('❌ Error disconnecting existing socket:', err));
-                    setTimeout(() => {
-                        if (existingSocket.connected) {
-                            logger.warn(`⚠️ Old socket for user ${userId} still connected after disconnect, force closing...`);
-                            existingSocket.disconnect(true);
-                        }
-                    }, 500);                    
-                    
-                    // סוגר את החיבור הישן
+                    existingSocket.disconnect(); // סוגר את החיבור הישן
                 } catch (err) {
                     logger.error(`❌ Error disconnecting existing socket for user ${userId}:`, err);
                 }
             }
+        
+            // if (existingSocket && existingSocket.id !== socket.id) {
+            //     logger.warn(`⚠️ Another socket exists for user ${userId}. Disconnecting old socket...`);
+        
+            //     try {
+            //         await existingSocket.disconnect().catch(err => logger.error('❌ Error disconnecting existing socket:', err));
+            //         setTimeout(() => {
+            //             if (existingSocket.connected) {
+            //                 logger.warn(`⚠️ Old socket for user ${userId} still connected after disconnect, force closing...`);
+            //                 existingSocket.disconnect(true);
+            //             }
+            //         }, 500);                    
+                    
+            //         // סוגר את החיבור הישן
+            //     } catch (err) {
+            //         logger.error(`❌ Error disconnecting existing socket for user ${userId}:`, err);
+            //     }
+            // }
+
+
         
             // עכשיו מקשרים את הסוקט החדש
             socket.userId = userId;
