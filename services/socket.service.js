@@ -2,6 +2,8 @@ import { logger } from './logger.service.js'
 import { Server } from 'socket.io'
 
 var gIo = null
+const gReadyUsers = new Set();
+
 
 export function setupSocketAPI(http) {
     gIo = new Server(http, {
@@ -43,21 +45,34 @@ export function setupSocketAPI(http) {
         });
 
         socket.on('user-ready', () => {
-            logger.info(`✅ [SERVER] User is ready! userId=${socket.userId}, socketId=${socket.id}`);
-        
             if (!socket.userId) {
                 logger.warn(`⚠️ [SERVER] Cannot emit TEST_NOTIFICATION - userId is missing`);
                 return;
             }
         
-            emitTestNotification({
-                userId: socket.userId,
-                data: {
-                    title: "📢 Welcome!",
-                    body: "You are successfully connected and ready for notifications! 🚀"
-                }
-            });
+            // בודקים אם יש כבר סוקט פעיל למשתמש הזה
+            const existingSocket = _getUserSocket(socket.userId);
+        
+            if (gReadyUsers.has(socket.userId) && existingSocket && existingSocket.connected) {
+                logger.warn(`⚠️ [SERVER] userId ${socket.userId} is already ready and connected. Ignoring user-ready.`);
+                return;
+            }
+        
+            gReadyUsers.add(socket.userId); // ✨ שומרים שהיוזר הזה כבר מוכן
+        
+            logger.info(`✅ [SERVER] User is ready! userId=${socket.userId}, socketId=${socket.id}`);
+        
+            // emitTestNotification({
+            //     userId: socket.userId,
+            //     data: {
+            //         title: "📢 Welcome!",
+            //         body: "You are successfully connected and ready for notifications! 🚀"
+            //     }
+            // });
         });
+        
+        
+        
         
 
 
@@ -72,6 +87,11 @@ export function setupSocketAPI(http) {
         
         socket.on('disconnect', (reason) => {
             logger.warn(`❌ Socket disconnected [id: ${socket.id}], reason: ${reason}`);
+
+            if (socket.userId) {
+                gReadyUsers.delete(socket.userId);
+                logger.info(`🧹 Removed userId ${socket.userId} from ready users after disconnect`);
+            }
         
             // if (socket.userId) {
             //     // שלח פינג ללקוח במקרה של ניתוק, כדי לוודא שהחיבור פעיל
@@ -255,16 +275,41 @@ export function setupSocketAPI(http) {
             socket.join('watching:' + userId)
         })
         //Auth
-        socket.on('set-user-socket', (userData) => {
+        socket.on('set-user-socket', async (userData) => {
             const { userId, username } = userData;
             if (!userId) {
                 logger.warn(`⚠️ Invalid userId received for socket authentication.`);
                 return;
             }
-            logger.info(`✅ Setting socket.userId = ${userId} and socket.username = ${username} for socket [id: ${socket.id}]`);
+        
+            // קודם כל נבדוק אם כבר יש סוקט למשתמש הזה
+            const existingSocket = _getUserSocket(userId);
+        
+            if (existingSocket && existingSocket.id !== socket.id) {
+                logger.warn(`⚠️ Another socket exists for user ${userId}. Disconnecting old socket...`);
+        
+                try {
+                    existingSocket.disconnect();
+                    setTimeout(() => {
+                        if (existingSocket.connected) {
+                            logger.warn(`⚠️ Old socket for user ${userId} still connected after disconnect, force closing...`);
+                            existingSocket.disconnect(true);
+                        }
+                    }, 500);                    
+                    
+                    // סוגר את החיבור הישן
+                } catch (err) {
+                    logger.error(`❌ Error disconnecting existing socket for user ${userId}:`, err);
+                }
+            }
+        
+            // עכשיו מקשרים את הסוקט החדש
             socket.userId = userId;
             socket.username = username;
+        
+            logger.info(`✅ Setting socket.userId = ${userId} and socket.username = ${username} for socket [id: ${socket.id}]`);
         });
+        
         // האזנה לאירוע Keep Alive מהלקוח
         socket.on('ping', () => {
             logger.info(`📡 Received ping from client [id: ${socket.id}]`);
