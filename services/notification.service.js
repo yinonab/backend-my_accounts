@@ -5,8 +5,6 @@ import webpush from 'web-push';
 import { config } from '../config/index.js';
 import { dbService } from './db.service.js';
 import { logger } from './logger.service.js';
-import { socketService } from './socket.service.js';
-
 import dotenv from 'dotenv';
 dotenv.config(); // וודא שזה נטען
 if (!admin.apps.length) {
@@ -398,7 +396,7 @@ async function sendNotification(userId, payload) {
             android: {
                 priority: "high",
                 ttl: 3600,
-                notification: { // לא לשים notification אם זה silent
+                notification: isSilent ? undefined : { // לא לשים notification אם זה silent
                     title: String(payload.title),
                     body: String(payload.body),
                     sound: payload.sound || 'default',
@@ -473,19 +471,6 @@ async function sendNotification(userId, payload) {
         });
 
         const response = await Promise.race([sendPromise, timeoutPromise]);
-
-        // 🔥 שלח גם דרך הסוקט (WebSocket)
-        await socketService.emitTestNotification({
-            userId: userId,
-            data: {
-                title: payload.title || "📬 בדיקה",
-                body: payload.body || "בדיקה של שליחה דרך test-notification",
-                messageId: messageId,
-                timestamp: Date.now()
-            }
-        });
-        
-
 
         console.log('✅ [FCM-HIGH-PRIORITY-SUCCESS] Notification delivered', {
             messageId,
