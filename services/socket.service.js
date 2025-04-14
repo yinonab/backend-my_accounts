@@ -62,13 +62,13 @@ export function setupSocketAPI(http) {
         
             logger.info(`✅ [SERVER] User is ready! userId=${socket.userId}, socketId=${socket.id}`);
         
-            emitTestNotification({
-                userId: socket.userId,
-                data: {
-                    title: "📢 Welcome!",
-                    body: "You are successfully connected and ready for notifications! 🚀"
-                }
-            });
+            // emitTestNotification({
+            //     userId: socket.userId,
+            //     data: {
+            //         title: "📢 Welcome!",
+            //         body: "You are successfully connected and ready for notifications! 🚀"
+            //     }
+            // });
         });
         
         
