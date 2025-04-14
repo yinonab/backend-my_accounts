@@ -283,7 +283,7 @@ export function setupSocketAPI(http) {
             }
         
             // קודם כל נבדוק אם כבר יש סוקט למשתמש הזה
-            // const existingSocket = _getUserSocket(userId);
+            const existingSocket = _getUserSocket(userId);
 
             // if (existingSocket && existingSocket.id !== socket.id) {
             //     logger.warn(`⚠️ Another socket exists for user ${userId}. Disconnecting old socket...`);
