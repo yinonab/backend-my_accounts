@@ -283,35 +283,35 @@ export function setupSocketAPI(http) {
             }
         
             // קודם כל נבדוק אם כבר יש סוקט למשתמש הזה
-            const existingSocket = _getUserSocket(userId);
+            // const existingSocket = _getUserSocket(userId);
 
-            if (existingSocket && existingSocket.id !== socket.id) {
-                logger.warn(`⚠️ Another socket exists for user ${userId}. Disconnecting old socket...`);
-        
-                try {
-                    existingSocket.disconnect(); // סוגר את החיבור הישן
-                } catch (err) {
-                    logger.error(`❌ Error disconnecting existing socket for user ${userId}:`, err);
-                }
-            }
-        
             // if (existingSocket && existingSocket.id !== socket.id) {
             //     logger.warn(`⚠️ Another socket exists for user ${userId}. Disconnecting old socket...`);
         
             //     try {
-            //         await existingSocket.disconnect().catch(err => logger.error('❌ Error disconnecting existing socket:', err));
-            //         setTimeout(() => {
-            //             if (existingSocket.connected) {
-            //                 logger.warn(`⚠️ Old socket for user ${userId} still connected after disconnect, force closing...`);
-            //                 existingSocket.disconnect(true);
-            //             }
-            //         }, 500);                    
-                    
-            //         // סוגר את החיבור הישן
+            //         existingSocket.disconnect(); // סוגר את החיבור הישן
             //     } catch (err) {
             //         logger.error(`❌ Error disconnecting existing socket for user ${userId}:`, err);
             //     }
             // }
+        
+            if (existingSocket && existingSocket.id !== socket.id) {
+                logger.warn(`⚠️ Another socket exists for user ${userId}. Disconnecting old socket...`);
+        
+                try {
+                    await existingSocket.disconnect().catch(err => logger.error('❌ Error disconnecting existing socket:', err));
+                    setTimeout(() => {
+                        if (existingSocket.connected) {
+                            logger.warn(`⚠️ Old socket for user ${userId} still connected after disconnect, force closing...`);
+                            existingSocket.disconnect(true);
+                        }
+                    }, 500);                    
+                    
+                    // סוגר את החיבור הישן
+                } catch (err) {
+                    logger.error(`❌ Error disconnecting existing socket for user ${userId}:`, err);
+                }
+            }
 
 
         
@@ -409,7 +409,6 @@ async function emitToUser({ type, data, userId }) {
 //     }
 // }
 
-
 async function emitTestNotification({ userId, data, attempt = 1 }) {
     if (!userId) {
         logger.error(`❌ emitTestNotification called without userId!`);
@@ -417,42 +416,53 @@ async function emitTestNotification({ userId, data, attempt = 1 }) {
     }
 
     userId = userId.toString();
-    
+
     let socketId = userSocketsMap.get(userId);
     let socket = socketId ? gIo.sockets.sockets.get(socketId) : null;
+    let sockets = [];
 
-    // Fallback - חיפוש ישיר אם לא מצאנו socketId
+    // Fallback - אם אין socketId במפה
     if (!socket) {
         socket = _getUserSocket(userId);
         if (socket) {
             logger.warn(`⚠️ SocketId not found in map for userId=${userId}, but found active socket with id=${socket.id}`);
-            userSocketsMap.set(userId, socket.id); // 🔥 לעדכן את המפה גם
+            userSocketsMap.set(userId, socket.id);
         }
     }
 
     logger.info(`🔍 emitTestNotification: Attempt ${attempt} to userId=${userId}`);
     logger.info(`🗺️ Current userSocketsMap keys: ${[...userSocketsMap.keys()]}`);
 
-    if (!socket || !socket.connected) {
-        logger.warn(`⚠️ No connected socket for user: ${userId} at attempt ${attempt}`);
-        
+    // נחפש את כל הסוקטים החיים של היוזר
+    sockets = [...gIo.sockets.sockets.values()].filter(s => 
+        s.userId && s.userId.toString() === userId && s.connected
+    );
+
+    if (sockets.length === 0) {
+        logger.warn(`⚠️ No connected sockets for user: ${userId} at attempt ${attempt}`);
+
         if (attempt <= 5) {
             setTimeout(() => {
                 emitTestNotification({ userId, data, attempt: attempt + 1 });
-            }, attempt * 500); // דיליי מתגבר בין ניסיונות
+            }, attempt * 500);
         } else {
             logger.error(`❌ Max retries reached for userId=${userId}. Giving up.`);
         }
         return;
     }
 
-    try {
-        logger.info(`📣 Emitting 'test-notification' to userId=${userId}, socketId=${socket.id}`);
-        socket.emit('test-notification', data);
-    } catch (err) {
-        logger.error(`❌ Failed to emit notification to userId=${userId}`, err);
-    }
+    logger.info(`📣 Emitting 'test-notification' to userId=${userId}, sockets count=${sockets.length}`);
+
+    sockets.forEach(socket => {
+        try {
+            logger.info(`✅ Emitting 'test-notification' to socketId=${socket.id}`);
+            socket.emit('test-notification', data);
+        } catch (err) {
+            logger.error(`❌ Failed to emit notification to socketId=${socket.id}`, err);
+        }
+    });
 }
+
 
 
 
