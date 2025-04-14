@@ -304,6 +304,9 @@ export function setupSocketAPI(http) {
             // עכשיו מקשרים את הסוקט החדש
             socket.userId = userId;
             socket.username = username;
+
+            userSocketsMap.set(userId.toString(), socket.id);
+
         
             logger.info(`✅ Setting socket.userId = ${userId} and socket.username = ${username} for socket [id: ${socket.id}]`);
         });
