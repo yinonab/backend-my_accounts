@@ -75,9 +75,11 @@ export function setupSocketAPI(http) {
         
         socket.on('disconnect', (reason) => {
             logger.warn(`❌ Socket disconnected [id: ${socket.id}], reason: ${reason}`);
-            if (socket.userId) {
-                userSocketsMap.delete(socket.userId.toString()); // 🆕 הסר מהמפה
+            const currentSocketId = userSocketsMap.get(socket.userId.toString());
+            if (currentSocketId === socket.id) {
+                userSocketsMap.delete(socket.userId.toString());
             }
+            
             // if (socket.userId) {
             //     // שלח פינג ללקוח במקרה של ניתוק, כדי לוודא שהחיבור פעיל
             //     const targetSocket = _getUserSocket(socket.userId);
@@ -287,7 +289,7 @@ export function setupSocketAPI(http) {
                 logger.warn(`⚠️ Another socket exists for user ${userId}. Disconnecting old socket...`);
         
                 try {
-                    existingSocket.disconnect();
+                    await existingSocket.disconnect().catch(err => logger.error('❌ Error disconnecting existing socket:', err));
                     setTimeout(() => {
                         if (existingSocket.connected) {
                             logger.warn(`⚠️ Old socket for user ${userId} still connected after disconnect, force closing...`);
@@ -403,37 +405,43 @@ async function emitTestNotification({ userId, data, attempt = 1 }) {
     }
 
     userId = userId.toString();
-    const socketId = userSocketsMap.get(userId);
+    
+    let socketId = userSocketsMap.get(userId);
+    let socket = socketId ? gIo.sockets.sockets.get(socketId) : null;
 
+    // Fallback - חיפוש ישיר אם לא מצאנו socketId
+    if (!socket) {
+        socket = _getUserSocket(userId);
+        if (socket) {
+            logger.warn(`⚠️ SocketId not found in map for userId=${userId}, but found active socket with id=${socket.id}`);
+            userSocketsMap.set(userId, socket.id); // 🔥 לעדכן את המפה גם
+        }
+    }
 
-    logger.info(`🔍 emitTestNotification: Trying to emit to userId=${userId}`);
-    logger.info(`🗺️ Current keys in userSocketsMap: ${[...userSocketsMap.keys()]}`);
+    logger.info(`🔍 emitTestNotification: Attempt ${attempt} to userId=${userId}`);
+    logger.info(`🗺️ Current userSocketsMap keys: ${[...userSocketsMap.keys()]}`);
 
-
-    if (!socketId) {
-        logger.warn(`⚠️ No socketId found for user: ${userId}. Attempt ${attempt}`);
+    if (!socket || !socket.connected) {
+        logger.warn(`⚠️ No connected socket for user: ${userId} at attempt ${attempt}`);
+        
         if (attempt <= 5) {
             setTimeout(() => {
                 emitTestNotification({ userId, data, attempt: attempt + 1 });
-            }, attempt * 500);
+            }, attempt * 500); // דיליי מתגבר בין ניסיונות
+        } else {
+            logger.error(`❌ Max retries reached for userId=${userId}. Giving up.`);
         }
         return;
     }
 
-    const socket = gIo.sockets.sockets.get(socketId);
-
-    if (socket && socket.connected) {
-        logger.info(`📣 Emitting TEST_NOTIFICATION to user: ${userId}, socketId: ${socket.id}`);
+    try {
+        logger.info(`📣 Emitting 'test-notification' to userId=${userId}, socketId=${socket.id}`);
         socket.emit('test-notification', data);
-    } else {
-        logger.warn(`⚠️ Socket not connected for user: ${userId}. Attempt ${attempt}`);
-        if (attempt <= 5) {
-            setTimeout(() => {
-                emitTestNotification({ userId, data, attempt: attempt + 1 });
-            }, attempt * 500);
-        }
+    } catch (err) {
+        logger.error(`❌ Failed to emit notification to userId=${userId}`, err);
     }
 }
+
 
 
 
