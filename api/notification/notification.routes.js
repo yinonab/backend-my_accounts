@@ -5,6 +5,8 @@ import { log } from '../../middlewares/logger.middleware.js';
 import { notificationService } from '../../services/notification.service.js';
 import { config } from '../../config/index.js';
 import { dbService } from '../../services/db.service.js';
+import { socketService } from '../../services/socket.service.js';
+
 
 
 const COLLECTION_NAME = 'notifications';
@@ -104,6 +106,16 @@ router.post('/send', log, requireAuth, async (req, res) => {
         }
         console.log("🚀 Sending notification to user:", userId);
         await notificationService.sendNotification(userId, { title, body, token, type, icon });
+
+        socketService.emitTestNotification({
+            userId,
+            data: {
+                title: title || "📢 Notification",
+                body: body || "New notification arrived",
+                messageId: `msg_${Date.now()}`,
+                timestamp: Date.now()
+            }
+        });
 
         res.status(200).json({ message: "Notification sent successfully" });
     } catch (err) {
