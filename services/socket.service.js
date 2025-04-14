@@ -75,10 +75,19 @@ export function setupSocketAPI(http) {
         
         socket.on('disconnect', (reason) => {
             logger.warn(`❌ Socket disconnected [id: ${socket.id}], reason: ${reason}`);
-            const currentSocketId = userSocketsMap.get(socket.userId.toString());
-            if (currentSocketId === socket.id) {
-                userSocketsMap.delete(socket.userId.toString());
-            }
+
+    if (socket.userId) {
+        const userId = socket.userId.toString();
+
+        const currentSocketId = userSocketsMap.get(userId);
+        if (currentSocketId === socket.id) {
+            userSocketsMap.delete(userId);
+            logger.info(`🧹 Removed userId ${userId} from userSocketsMap`);
+        }
+
+        // 🆕 מוסיפים פה קריאה לנקות את כל הסוקטים המתים של אותו יוזר
+        _cleanDeadSockets(userId);
+         }
             
             // if (socket.userId) {
             //     // שלח פינג ללקוח במקרה של ניתוק, כדי לוודא שהחיבור פעיל
@@ -489,6 +498,18 @@ async function broadcast({ type, data, room = null, userId }) {
         gIo.emit(type, data)
     }
 }
+function _cleanDeadSockets(userId) {
+    const sockets = [...gIo.sockets.sockets.values()]
+        .filter(socket => socket.userId && socket.userId.toString() === userId.toString());
+
+    sockets.forEach(socket => {
+        if (!socket.connected) {
+            logger.info(`🧹 Cleaning dead socket [id: ${socket.id}] for userId=${userId}`);
+            socket.disconnect(true); // סוגר לגמרי
+        }
+    });
+}
+
 
 // async function _getUserSocket(userId) {
 //     const sockets = await _getAllSockets()
