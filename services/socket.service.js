@@ -53,13 +53,13 @@ export function setupSocketAPI(http) {
             }
             userSocketsMap.set(socket.userId.toString(), socket.id); // 🆕 גם כאן לשמור את המיפוי
 
-            // emitTestNotification({
-            //     userId: socket.userId,
-            //     data: {
-            //         title: "📢 Welcome!",
-            //         body: "You are successfully connected and ready for notifications! 🚀"
-            //     }
-            // });
+            emitTestNotification({
+                userId: socket.userId,
+                data: {
+                    title: "📢 Welcome!",
+                    body: "You are successfully connected and ready for notifications! 🚀"
+                }
+            });
         });
         
 
