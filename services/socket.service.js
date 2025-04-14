@@ -50,13 +50,13 @@ export function setupSocketAPI(http) {
                 return;
             }
         
-            // emitTestNotification({
-            //     userId: socket.userId,
-            //     data: {
-            //         title: "📢 Welcome!",
-            //         body: "You are successfully connected and ready for notifications! 🚀"
-            //     }
-            // });
+            emitTestNotification({
+                userId: socket.userId,
+                data: {
+                    title: "📢 Welcome!",
+                    body: "You are successfully connected and ready for notifications! 🚀"
+                }
+            });
         });
         
 
