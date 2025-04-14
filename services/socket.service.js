@@ -364,6 +364,11 @@ async function emitTestNotification({ userId, data, attempt = 1 }) {
     userId = userId.toString();
     const socketId = userSocketsMap.get(userId);
 
+
+    logger.info(`🔍 emitTestNotification: Trying to emit to userId=${userId}`);
+    logger.info(`🗺️ Current keys in userSocketsMap: ${[...userSocketsMap.keys()]}`);
+
+
     if (!socketId) {
         logger.warn(`⚠️ No socketId found for user: ${userId}. Attempt ${attempt}`);
         if (attempt <= 5) {
