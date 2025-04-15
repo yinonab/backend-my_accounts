@@ -219,19 +219,29 @@ export function setupSocketAPI(http) {
    
 
        // 🆕 שינוי: עכשיו תומך בריבוי סוקטים לכל יוזר
-socket.on('set-user-socket', (userData) => {
-    const { userId, username } = userData;
-    if (!userId) return;
-    socket.userId = userId;
-    socket.username = username;
-
-    if (!userSocketsMap.has(userId)) {
-        userSocketsMap.set(userId, []);
-    }
-    userSocketsMap.get(userId).push(socket.id);
-
-    logger.info(`✅ Added socket ${socket.id} to user ${userId}`);
-});
+       socket.on('set-user-socket', (userData) => {
+        const { userId, username } = userData;
+        if (!userId) return;
+    
+        socket.userId = userId;
+        socket.username = username;
+    
+        // אם עוד לא קיים מיפוי - ניצור חדש עם סט ריק
+        if (!userSocketsMap.has(userId)) {
+            userSocketsMap.set(userId, []);
+        }
+    
+        const socketIds = userSocketsMap.get(userId);
+    
+        // בדיקה אם הסוקט כבר במערך
+        if (!socketIds.includes(socket.id)) {
+            socketIds.push(socket.id);
+            logger.info(`✅ Added socket ${socket.id} to user ${userId}`);
+        } else {
+            logger.info(`ℹ️ Socket ${socket.id} already mapped for user ${userId}, skipping.`);
+        }
+    });
+    
 
         
 
@@ -253,6 +263,23 @@ socket.on('set-user-socket', (userData) => {
         })
 
     })
+}
+function cleanupDuplicateSocketRefs(userId) {
+    const socketIds = userSocketsMap.get(userId) || [];
+    const uniqueSocketIds = [...new Set(socketIds)]; // הסרה של כפילויות
+
+    const aliveSocketIds = uniqueSocketIds.filter(socketId => {
+        const socket = gIo.sockets.sockets.get(socketId);
+        return socket && socket.connected;
+    });
+
+    if (aliveSocketIds.length > 0) {
+        userSocketsMap.set(userId, aliveSocketIds);
+    } else {
+        userSocketsMap.delete(userId);
+    }
+
+    logger.info(`🧼 Cleaned socket refs for userId=${userId}, remaining: [${aliveSocketIds.join(', ')}]`);
 }
 
 
@@ -434,5 +461,6 @@ export const socketService = {
     // Send to all sockets BUT not the current socket - if found
     // (otherwise broadcast to a room / to all)
     broadcast,
+    cleanupDuplicateSocketRefs,
     emitTestNotification,
 }
