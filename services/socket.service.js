@@ -101,26 +101,27 @@ export function setupSocketAPI(http) {
         socket.on('typing', (data) => {
             const { toUserId, messageType } = data;
             if (!socket.userId || !toUserId || !messageType) return;
-
-            const targetSocket = _getUserSocket(toUserId);
-            if (targetSocket) {
+        
+            const targetSockets = _getUserSockets(toUserId);
+            targetSockets.forEach(targetSocket => {
                 targetSocket.emit('user-typing', {
                     fromUserId: socket.userId,
                     messageType
                 });
-            }
+            });
         });
+        
 
         socket.on('stop-typing', (data) => {
             const { toUserId } = data;
             if (!socket.userId || !toUserId) return;
-
-            const targetSocket = _getUserSocket(toUserId);
-            if (targetSocket) {
+        
+            const targetSockets = _getUserSockets(toUserId);
+            targetSockets.forEach(targetSocket => {
                 targetSocket.emit('user-stop-typing', { fromUserId: socket.userId });
-            }
+            });
         });
-
+        
 
         socket.on('chat-set-topic', topic => {
             if (socket.myTopic === topic) return
@@ -195,15 +196,16 @@ export function setupSocketAPI(http) {
             🖼️ Image: ${imageUrl ? 'Yes' : 'No'}"
             🎥 Video: ${videoUrl ? 'Yes' : 'No'}"`);
 
-            const targetSocket = _getUserSocket(toUserId);
+            const targetSockets = _getUserSockets(toUserId);
 
-            if (targetSocket) {
-                logger.info(`🚀 Sending private message to: ${toUserId} socketId: ${targetSocket.id}`);
-                logger.info(`🚀 Sending private message to: ${privateMessage} socketId: ${privateMessage}`);
-                targetSocket.emit('chat-add-private-msg', privateMessage);
-                logger.info(`✅ Private message successfully sent to ${toUserId} - ${JSON.stringify(privateMessage)}`);
+            if (targetSockets.length) {
+                targetSockets.forEach(targetSocket => {
+                    logger.info(`🚀 Sending private message to: ${toUserId} socketId: ${targetSocket.id}`);
+                    targetSocket.emit('chat-add-private-msg', privateMessage);
+                });
+                logger.info(`✅ Private message successfully sent to ${toUserId} on ${targetSockets.length} socket(s) - ${JSON.stringify(privateMessage)}`);
             } else {
-                logger.warn(`⚠️ No active socket found for recipient ${toUserId}. Message could not be delivered.`);
+                logger.warn(`⚠️ No active sockets found for recipient ${toUserId}. Message could not be delivered.`);
             }
         });
 
