@@ -43,6 +43,8 @@ export function setupSocketAPI(http) {
         pingInterval: 25000,
         pingTimeout: 600000
     });
+    setInterval(cleanupAllDeadSockets, 60 * 1000);
+
     gIo.on('connection', socket => {
         logger.info(`New connected socket [id: ${socket.id}]`)
         logger.info(`✅ New connected socket [id: ${socket.id}]`)
@@ -83,13 +85,15 @@ export function setupSocketAPI(http) {
         socket.on('disconnect', (reason) => {
             logger.warn(`Socket disconnected [id: ${socket.id}], reason: ${reason}`);
             if (socket.userId) {
-                const sockets = userSocketsMap.get(socket.userId) || [];
-                const updatedSockets = sockets.filter(id => id !== socket.id);
-                if (updatedSockets.length > 0) {
-                    userSocketsMap.set(socket.userId, updatedSockets);
-                } else {
-                    userSocketsMap.delete(socket.userId);
-                    logger.info(`🧹 All sockets closed for user ${socket.userId}, removed from map.`);
+                const socketSet = userSocketsMap.get(socket.userId);
+                if (socketSet) {
+                    socketSet.delete(socket.id); // 🧠 שינוי: מחיקה מתוך Set
+                    if (socketSet.size > 0) {
+                        userSocketsMap.set(socket.userId, socketSet);
+                    } else {
+                        userSocketsMap.delete(socket.userId);
+                        logger.info(`🧹 All sockets closed for user ${socket.userId}, removed from map.`);
+                    }
                 }
             }
         });
@@ -224,20 +228,15 @@ export function setupSocketAPI(http) {
        socket.on('set-user-socket', (userData) => {
         const { userId, username } = userData;
         if (!userId) return;
-    
         socket.userId = userId;
         socket.username = username;
-    
-        // אם עוד לא קיים מיפוי - ניצור חדש עם סט ריק
+
         if (!userSocketsMap.has(userId)) {
-            userSocketsMap.set(userId, []);
+            userSocketsMap.set(userId, new Set());
         }
-    
-        const socketIds = userSocketsMap.get(userId);
-    
-        // בדיקה אם הסוקט כבר במערך
-        if (!socketIds.includes(socket.id)) {
-            socketIds.push(socket.id);
+        const socketSet = userSocketsMap.get(userId);
+        if (!socketSet.has(socket.id)) {
+            socketSet.add(socket.id);
             logger.info(`✅ Added socket ${socket.id} to user ${userId}`);
         } else {
             logger.info(`ℹ️ Socket ${socket.id} already mapped for user ${userId}, skipping.`);
@@ -267,21 +266,20 @@ export function setupSocketAPI(http) {
     })
 }
 function cleanupDuplicateSocketRefs(userId) {
-    const socketIds = userSocketsMap.get(userId) || [];
-    const uniqueSocketIds = [...new Set(socketIds)]; // הסרה של כפילויות
-
-    const aliveSocketIds = uniqueSocketIds.filter(socketId => {
+    const socketSet = userSocketsMap.get(userId) || new Set();
+    const aliveSocketIds = new Set();
+    for (const socketId of socketSet) {
         const socket = gIo.sockets.sockets.get(socketId);
-        return socket && socket.connected;
-    });
-
-    if (aliveSocketIds.length > 0) {
+        if (socket && socket.connected) {
+            aliveSocketIds.add(socketId);
+        }
+    }
+    if (aliveSocketIds.size > 0) {
         userSocketsMap.set(userId, aliveSocketIds);
     } else {
         userSocketsMap.delete(userId);
     }
-
-    logger.info(`🧼 Cleaned socket refs for userId=${userId}, remaining: [${aliveSocketIds.join(', ')}]`);
+    logger.info(`🧼 Cleaned socket refs for userId=${userId}, remaining: [${Array.from(aliveSocketIds).join(', ')}]`);
 }
 
 
@@ -291,14 +289,14 @@ function emitTo({ type, data, label }) {
 }
 
 async function emitToUser({ type, data, userId }) {
-    const socketsIds = userSocketsMap.get(userId) || [];
-    socketsIds.forEach(socketId => {
+    const socketSet = userSocketsMap.get(userId) || new Set();
+    for (const socketId of socketSet) {
         const socket = gIo.sockets.sockets.get(socketId);
         if (socket && socket.connected) {
             socket.emit(type, data);
             logger.info(`✅ Emitted ${type} to socket ${socket.id}`);
         }
-    });
+    }
 }
 
 async function emitTestNotification({ userId, data, attempt = 1 }) {
@@ -306,13 +304,13 @@ async function emitTestNotification({ userId, data, attempt = 1 }) {
         logger.error(`❌ emitTestNotification called without userId!`);
         return;
     }
-
-    const socketsIds = userSocketsMap.get(userId) || [];
+    const socketSet = userSocketsMap.get(userId) || new Set();
+    const socketIds = Array.from(socketSet);
 
     logger.info(`🔍 emitTestNotification: Attempt ${attempt} for userId=${userId}`);
-    logger.info(`🗺️ Current sockets for userId=${userId}: [${socketsIds.join(', ')}]`);
+    logger.info(`🗺️ Current sockets for userId=${userId}: [${socketIds.join(', ')}]`);
 
-    if (!socketsIds.length) {
+    if (!socketIds.length) {
         if (attempt <= 5) {
             logger.warn(`⚠️ No sockets for userId=${userId}. Retrying attempt ${attempt}`);
             setTimeout(() => emitTestNotification({ userId, data, attempt: attempt + 1 }), attempt * 500);
@@ -322,7 +320,7 @@ async function emitTestNotification({ userId, data, attempt = 1 }) {
         return;
     }
 
-    socketsIds.forEach(socketId => {
+    for (const socketId of socketIds) {
         const socket = gIo.sockets.sockets.get(socketId);
         if (socket && socket.connected) {
             socket.emit('test-notification', data);
@@ -330,11 +328,34 @@ async function emitTestNotification({ userId, data, attempt = 1 }) {
         } else {
             logger.warn(`⚠️ Skipped socketId=${socketId} (not found or disconnected)`);
         }
-    });
+    }
 }
 
 
+function cleanupAllDeadSockets() {
+    logger.info("🧹 Running global cleanup for dead sockets...");
 
+    for (const [userId, socketSet] of userSocketsMap.entries()) {
+        const aliveSocketIds = new Set();
+        for (const socketId of socketSet) {
+            const socket = gIo.sockets.sockets.get(socketId);
+            if (socket && socket.connected) {
+                aliveSocketIds.add(socketId);
+            } else {
+                logger.info(`🧹 Removing dead socket [id: ${socketId}] for userId=${userId}`);
+            }
+        }
+
+        if (aliveSocketIds.size > 0) {
+            userSocketsMap.set(userId, aliveSocketIds);
+        } else {
+            userSocketsMap.delete(userId);
+            logger.info(`❌ Removed user ${userId} from map – no active sockets`);
+        }
+    }
+
+    logger.info(`✅ Cleanup complete. Active users: ${userSocketsMap.size}`);
+}
 
 async function broadcast({ type, data, room = null, userId }) {
     userId = userId.toString();
@@ -347,8 +368,9 @@ async function broadcast({ type, data, room = null, userId }) {
         return;
     }
 
-    const socketsIds = userSocketsMap.get(userId) || [];
-    if (socketsIds.length) {
+    const socketSet = userSocketsMap.get(userId) || new Set();
+    const socketsIds = Array.from(socketSet);
+        if (socketsIds.length) {
         logger.info(`📤 Broadcasting to all sockets of user: ${userId}, excluding them`);
         socketsIds.forEach(socketId => {
             const socket = gIo.sockets.sockets.get(socketId);
@@ -401,21 +423,19 @@ async function broadcast({ type, data, room = null, userId }) {
 // }
 
 function _cleanDeadSockets(userId) {
-    const socketsIds = userSocketsMap.get(userId) || [];
-    const aliveSockets = [];
-
-    socketsIds.forEach(socketId => {
+    const socketSet = userSocketsMap.get(userId) || new Set();
+    const aliveSocketIds = new Set();
+    for (const socketId of socketSet) {
         const socket = gIo.sockets.sockets.get(socketId);
         if (socket && socket.connected) {
-            aliveSockets.push(socketId);
+            aliveSocketIds.add(socketId);
         } else {
             logger.info(`🧹 Removing dead socket [id: ${socketId}] for userId=${userId}`);
         }
-    });
-
-    if (aliveSockets.length) {
-        userSocketsMap.set(userId, aliveSockets);
-        logger.info(`🛠️ Updated alive sockets for userId=${userId}: [${aliveSockets.join(', ')}]`);
+    }
+    if (aliveSocketIds.size > 0) {
+        userSocketsMap.set(userId, aliveSocketIds);
+        logger.info(`🛠️ Updated alive sockets for userId=${userId}: [${Array.from(aliveSocketIds).join(', ')}]`);
     } else {
         userSocketsMap.delete(userId);
         logger.info(`🧹 All sockets dead for userId=${userId}, removed from map.`);
@@ -430,8 +450,8 @@ function _getUserSocket(userId) {
 }
 
 function _getUserSockets(userId) {
-    const socketsIds = userSocketsMap.get(userId) || [];
-    const sockets = socketsIds
+    const socketSet = userSocketsMap.get(userId) || new Set();
+    const sockets = Array.from(socketSet)
         .map(socketId => gIo.sockets.sockets.get(socketId))
         .filter(socket => socket && socket.connected);
     return sockets;
