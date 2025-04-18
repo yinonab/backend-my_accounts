@@ -385,8 +385,8 @@ async function sendNotification(userId, payload) {
               priority: "high",
               ttl: 3600 * 1000, // 1 שעה
               notification: {
-                channelId: "default", // ודא שהוגדר NotificationChannel כזה באנדרואיד
-                icon: "ic_stat_notify", // שם האייקון מה-res/mipmap
+                channelId: "fcm_channel", // ודא שהוגדר NotificationChannel כזה באנדרואיד
+                icon: "ic_ws_notification", // שם האייקון מה-res/mipmap
                 sound: "default"
               },
               data: {
