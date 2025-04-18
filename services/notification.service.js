@@ -365,143 +365,74 @@ async function sendNotification(userId, payload) {
         }
 
         const message = {
-            token: userSubscription.token,
+            notification: {
+              title: payload.title,
+              body: payload.body,
+              image: payload.icon
+            },
             data: {
-                ...payload.data,
-                title: String(payload.title || ''),
-                body: String(payload.body || ''),
-                icon: String(payload.icon || defaultIcon),
-                badge: payload.badge || defaultIcon,
-                sound: payload.sound || 'default',
-                type: payload.type || 'regular',
-                silent: String(!!payload.silent),
-                wakeUpApp: "true",
-                requireInteraction: String(!!payload.requireInteraction),
-                click_action: "FLUTTER_NOTIFICATION_CLICK",
-                timestamp: Date.now().toString(),
-                messageId,
-                urgent: "true",
-                android_notification_config: JSON.stringify({
-                    channel_id: payload.androidChannel || 'high_importance_channel',
-                    priority: "high",
-                    visibility: "public",
-                    vibrate_timings: ["100ms", "200ms", "100ms"],
-                    light_settings: {
-                        color: '#FF0000',
-                        light_on_duration: '1000ms',
-                        light_off_duration: '1000ms'
-                    }
-                })
+              title: String(payload.title),
+              body: String(payload.body),
+              icon: String(payload.icon),
+              badge: String(payload.badge),
+              sound: "default",
+              wakeUpApp: String(payload.wakeUpApp ?? true),
+              type: String(payload.type ?? "regular"),
+              silent: String(payload.silent ?? false),
+              requireInteraction: String(payload.requireInteraction ?? false)
             },
             android: {
-                priority: "high",
-                ttl: 3600,
-                notification: isSilent ? undefined : { // לא לשים notification אם זה silent
-                    title: String(payload.title),
-                    body: String(payload.body),
-                    sound: payload.sound || 'default',
-                    visibility: 'public',
-                    channel_id: payload.androidChannel || 'high_importance_channel',
-                    icon: 'notification_icon',
-                    color: '#FF0000',
-                    tag: payload.tag || messageId,
-                    priority: 'high',
-                    vibrate_timings: ["0.5s", "0.8s", "0.5s"],
-                    light_settings: {
-                        color: { red: 255, green: 0, blue: 0 },
-                        light_on_duration: "1s",
-                        light_off_duration: "1s"
-                    },
-                    default_vibrate_timings: true,
-                    default_light_settings: true,
-                    default_sound: true,
-                    notification_count: 1,
-                }
+              priority: "high",
+              ttl: 3600 * 1000, // 1 שעה
+              notification: {
+                channelId: "default", // ודא שהוגדר NotificationChannel כזה באנדרואיד
+                icon: "ic_stat_notify", // שם האייקון מה-res/mipmap
+                sound: "default"
+              },
+              data: {
+                title: String(payload.title),
+                body: String(payload.body),
+                icon: String(payload.icon),
+                badge: String(payload.badge),
+                sound: "default",
+                wakeUpApp: String(payload.wakeUpApp ?? true),
+                type: String(payload.type ?? "regular"),
+                silent: String(payload.silent ?? false),
+                requireInteraction: String(payload.requireInteraction ?? false)
+              }
             },
             apns: {
-                headers: {
-                    'apns-priority': '10',
-                    'apns-push-type': isSilent ? 'background' : 'alert',
-                    'apns-collapse-id': messageId
-                },
-                payload: {
-                    aps: {
-                        sound: payload.sound || 'default',
-                        badge: payload.badgeCount || 1,
-                        'content-available': 1,
-                        mutableContent: 1,
-                        alert: isSilent ? undefined : { // רק אם לא silent
-                            title: payload.title,
-                            body: payload.body
-                        }
-                    }
+              headers: {
+                "apns-priority": "10"
+              },
+              payload: {
+                aps: {
+                  alert: {
+                    title: payload.title,
+                    body: payload.body
+                  },
+                  sound: "default"
                 }
+              }
             },
-            webpush: {
-                headers: {
-                    Urgency: 'high',
-                    TTL: '3600'
-                }
-            },
-            fcmOptions: {
-                analyticsLabel: payload.type || 'high_priority'
-            }
-        };
-
-        // ✅ הכי חשוב - שדה notification ברמה העליונה אם זה לא silent
-        // if (!isSilent) {
-            message.notification = {
-                title: String(payload.title || "🔄 Keep Alive"),
-                body: String(payload.body || "Keeping app awake...")
-            };
-        // }
-
-        console.log('📨 Constructed HIGH PRIORITY FCM message:', {
-            messageId,
-            androidPriority: message.android.priority,
-            apnsPriority: message.apns.headers['apns-priority'],
-            ttlSeconds: message.android.ttl,
-            containsNotification: !!message.notification
-        });
-
-        const TIMEOUT = 15000;
-        const sendPromise = admin.messaging().send(message);
-        const timeoutPromise = new Promise((_, reject) => {
-            setTimeout(() => reject(new Error('FCM_TIMEOUT')), TIMEOUT);
-        });
-
-        const response = await Promise.race([sendPromise, timeoutPromise]);
-
-        console.log('✅ [FCM-HIGH-PRIORITY-SUCCESS] Notification delivered', {
-            messageId,
-            userId,
-            fcmMessageId: response.messageId,
-            deliveryTime: new Date().toISOString(),
-            deviceState: 'ACTIVE'
-        });
-
-        return {
-            success: true,
-            messageId: response.messageId,
-            fcmResponse: response
-        };
-
-    } catch (error) {
-        console.error(`❌ [FCM-HIGH-PRIORITY-FAILURE]`, {
-            errorDetails: {
-                code: error.code,
-                message: error.message
-            }
-        });
-
-        return {
-            success: false,
-            errorType: error.code || 'UNKNOWN_ERROR',
-            message: error.message
-        };
-    }
-}
-
+            token: userSubscription.token
+          };
+      
+          console.log("📨 Sending FCM message:", message);
+      
+          const response = await admin.messaging().send(message);
+          console.log("✅ Notification sent successfully:", response);
+        } catch (err) {
+          console.error("❌ Failed to send Firebase notification:", err);
+      
+          if (err.code === 'messaging/registration-token-not-registered') {
+            console.warn(`🗑️ Token is no longer valid. Removing for user: ${userId}`);
+            await removeSubscription(userId);
+          }
+      
+          throw err;
+        }
+      }
 
 // async function removeSubscription(userId) {
 //     console.log(`🗑️ Attempting to remove subscription for user: ${userId}`);
