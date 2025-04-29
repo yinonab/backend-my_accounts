@@ -366,73 +366,78 @@ async function sendNotification(userId, payload) {
 
         const message = {
             notification: {
-              title: payload.title,
-              body: payload.body,
-              image: payload.icon
+                title: payload.title,
+                body: payload.body,
+                image: payload.icon || defaultIcon // אם לא הוגדר אייקון, השתמש בברירת מחדל
             },
             data: {
-              title: String(payload.title),
-              body: String(payload.body),
-              icon: String(payload.icon),
-              badge: String(payload.badge),
-              sound: "default",
-              wakeUpApp: String(payload.wakeUpApp ?? true),
-              type: String(payload.type ?? "regular"),
-              silent: String(payload.silent ?? false),
-              requireInteraction: String(payload.requireInteraction ?? false)
-            },
-            android: {
-              priority: "high",
-              ttl: 3600 * 1000, // 1 שעה
-              notification: {
-                channelId: "fcm_channel", // ודא שהוגדר NotificationChannel כזה באנדרואיד
-                icon: "ic_ws_notification", // שם האייקון מה-res/mipmap
-                sound: "default"
-              },
-              data: {
                 title: String(payload.title),
                 body: String(payload.body),
-                icon: String(payload.icon),
-                badge: String(payload.badge),
+                icon: String(payload.icon || defaultIcon),
+                badge: String(payload.badge || 'default'),
                 sound: "default",
                 wakeUpApp: String(payload.wakeUpApp ?? true),
                 type: String(payload.type ?? "regular"),
                 silent: String(payload.silent ?? false),
-                requireInteraction: String(payload.requireInteraction ?? false)
-              }
+                requireInteraction: String(payload.requireInteraction ?? false),
+                timestamp: Date.now().toString(),
+                messageId,
+                urgent: "true"
+            },
+            android: {
+                priority: "high",  // עדיפות גבוהה
+                ttl: 3600 * 1000, // זמן חיים של 1 שעה
+                notification: {
+                    channelId: "fcm_channel",  // ודא שהערוץ קיים באנדרואיד
+                    icon: "ic_ws_notification",  // אייקון ההתראה באנדרואיד
+                    sound: "default"
+                },
+                data: {
+                    title: String(payload.title),
+                    body: String(payload.body),
+                    icon: String(payload.icon || defaultIcon),
+                    badge: String(payload.badge || 'default'),
+                    sound: "default",
+                    wakeUpApp: String(payload.wakeUpApp ?? true),
+                    type: String(payload.type ?? "regular"),
+                    silent: String(payload.silent ?? false),
+                    requireInteraction: String(payload.requireInteraction ?? false)
+                }
             },
             apns: {
-              headers: {
-                "apns-priority": "10"
-              },
-              payload: {
-                aps: {
-                  alert: {
-                    title: payload.title,
-                    body: payload.body
-                  },
-                  sound: "default"
+                headers: {
+                    "apns-priority": "10"
+                },
+                payload: {
+                    aps: {
+                        alert: {
+                            title: payload.title,
+                            body: payload.body
+                        },
+                        sound: "default"
+                    }
                 }
-              }
             },
             token: userSubscription.token
-          };
-      
-          console.log("📨 Sending FCM message:", message);
-      
-          const response = await admin.messaging().send(message);
-          console.log("✅ Notification sent successfully:", response);
-        } catch (err) {
-          console.error("❌ Failed to send Firebase notification:", err);
-      
-          if (err.code === 'messaging/registration-token-not-registered') {
+        };
+
+        console.log("📨 Sending FCM message:", message);
+
+        const response = await admin.messaging().send(message);
+        console.log("✅ Notification sent successfully:", response);
+
+    } catch (err) {
+        console.error("❌ Failed to send Firebase notification:", err);
+
+        if (err.code === 'messaging/registration-token-not-registered') {
             console.warn(`🗑️ Token is no longer valid. Removing for user: ${userId}`);
             await removeSubscription(userId);
-          }
-      
-          throw err;
         }
-      }
+
+        throw err;
+    }
+}
+
 
 // async function removeSubscription(userId) {
 //     console.log(`🗑️ Attempting to remove subscription for user: ${userId}`);
