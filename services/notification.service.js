@@ -378,13 +378,14 @@ async function sendNotification(userId, payload) {
                 icon: String(payload.icon || defaultIcon),
                 badge: String(payload.badge || 'default'),
                 sound: "default",
-                wakeUpApp: String(payload.wakeUpApp ?? true),
+                wakeUpApp: String(true),
                 type: String(payload.type ?? "regular"),
                 silent: String(payload.silent ?? false),
                 requireInteraction: String(payload.requireInteraction ?? false),
                 timestamp: Date.now().toString(),
                 messageId,
-                urgent: "true"
+                urgent: "true",
+                content_available: "true",
             },
             android: {
                 priority: "high",  // עדיפות גבוהה
@@ -400,10 +401,11 @@ async function sendNotification(userId, payload) {
                     icon: String(payload.icon || defaultIcon),
                     badge: String(payload.badge || 'default'),
                     sound: "default",
-                    wakeUpApp: String(payload.wakeUpApp ?? true),
+                    wakeUpApp: String(true),
                     type: String(payload.type ?? "regular"),
                     silent: String(payload.silent ?? false),
-                    requireInteraction: String(true)
+                    requireInteraction: String(true),
+                    content_available: "true",
                 }
             },
             apns: {
