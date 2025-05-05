@@ -403,7 +403,7 @@ async function sendNotification(userId, payload) {
                     wakeUpApp: String(payload.wakeUpApp ?? true),
                     type: String(payload.type ?? "regular"),
                     silent: String(payload.silent ?? false),
-                    requireInteraction: String(payload.requireInteraction ?? false)
+                    requireInteraction: String(true)
                 }
             },
             apns: {
