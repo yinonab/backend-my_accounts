@@ -298,36 +298,69 @@ async function emitToUser({ type, data, userId }) {
         }
     }
 }
-
 async function emitTestNotification({ userId, data, attempt = 1 }) {
+    // אם לא הועבר userId, נרשום שגיאה
     if (!userId) {
         logger.error(`❌ emitTestNotification called without userId!`);
         return;
     }
+    
+    // לוקחים את כל הסוקטים של המשתמש מתוך המפה, אם אין, ניצור מערך ריק
     const socketSet = userSocketsMap.get(userId) || new Set();
-    const socketIds = Array.from(socketSet);
+    const socketIds = Array.from(socketSet); // ממירים את ה-Set למערך כדי לעבוד איתו
 
+    // רושמים את הניסיון הנוכחי של השיגור
     logger.info(`🔍 emitTestNotification: Attempt ${attempt} for userId=${userId}`);
     logger.info(`🗺️ Current sockets for userId=${userId}: [${socketIds.join(', ')}]`);
 
+    // אם אין סוקטים שנמצאים במפה עבור המשתמש, ננסה שוב עד 5 פעמים
     if (!socketIds.length) {
         if (attempt <= 5) {
             logger.warn(`⚠️ No sockets for userId=${userId}. Retrying attempt ${attempt}`);
+            // אם אין סוקטים, נמתין ונסו שוב
             setTimeout(() => emitTestNotification({ userId, data, attempt: attempt + 1 }), attempt * 500);
         } else {
+            // אם הגענו למקסימום של 5 ניסיונות, נרשום שגיאה
             logger.error(`❌ Max retries reached for userId=${userId}. Giving up.`);
         }
-        return;
+        return; // אם לא הצלחנו למצוא סוקטים, יוצאים מהפונקציה
     }
 
+    // עבור כל סוקט במערך, ננסה לשלוח את ההודעה
     for (const socketId of socketIds) {
-        const socket = gIo.sockets.sockets.get(socketId);
-        if (socket && socket.connected) {
+        const socket = gIo.sockets.sockets.get(socketId); // מוצאים את הסוקט מתוך המפה
+
+        if (socket && socket.connected) { // אם הסוקט מחובר
+            // שולחים את ההודעה לסוקט הזה
             socket.emit('test-notification', data);
             logger.info(`✅ Sent test-notification to socketId=${socket.id}`);
         } else {
+            // אם הסוקט לא נמצא או לא מחובר, נרשום שהסוקט מנותק
             logger.warn(`⚠️ Skipped socketId=${socketId} (not found or disconnected)`);
+            // אם הסוקט לא נמצא או מנותק, ננקה אותו מהמפה
+            cleanupDeadSocket(socketId, userId);
         }
+    }
+}
+
+// פונקציה לניקוי סוקט מנותק מהמפה
+function cleanupDeadSocket(socketId, userId) {
+    const socketSet = userSocketsMap.get(userId); // מוצאים את כל הסוקטים של המשתמש
+
+    if (!socketSet) return; // אם אין סוקטים, יוצאים
+
+    const socket = gIo.sockets.sockets.get(socketId);
+    const socketName = socket ? socket.handshake ? socket.handshake.headers['user-agent'] : 'Unknown Socket' : 'Socket Not Found';
+
+
+    // מוחקים את הסוקט מהמפה
+    socketSet.delete(socketId);
+    logger.info(`🧹 Removed dead socket [id: ${socketId}, Name: ${socketName}] for userId=${userId}`);
+
+    // אם לא נשארו סוקטים פעילים עבור המשתמש, נמחק את המשתמש מהמפה
+    if (socketSet.size === 0) {
+        userSocketsMap.delete(userId);
+        logger.info(`❌ No active sockets left for userId=${userId}, removing from map.`);
     }
 }
 
@@ -339,10 +372,13 @@ function cleanupAllDeadSockets() {
         const aliveSocketIds = new Set();
         for (const socketId of socketSet) {
             const socket = gIo.sockets.sockets.get(socketId);
+            const socketName = socket ? socket.handshake ? socket.handshake.headers['user-agent'] : 'Unknown Socket' : 'Socket Not Found';
+
             if (socket && socket.connected) {
                 aliveSocketIds.add(socketId);
             } else {
-                logger.info(`🧹 Removing dead socket [id: ${socketId}] for userId=${userId}`);
+                socketSet.delete(socketId);  // מחיקה של הסוקט מהמפה של המשתמש
+                logger.info(`🧹 Removed dead socket [id: ${socketId}, Name: ${socketName}] for userId=${userId}`);
             }
         }
 
