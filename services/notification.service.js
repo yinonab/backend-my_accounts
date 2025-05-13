@@ -370,7 +370,7 @@ async function sendNotification(userId, payload) {
             notification: {
                 title: payload.title,
                 body: payload.body,
-                image: payload.icon || defaultIcon // אם לא הוגדר אייקון, השתמש בברירת מחדל
+                image: payload.icon || defaultIcon
             },
             data: {
                 title: String(payload.title),
@@ -386,31 +386,35 @@ async function sendNotification(userId, payload) {
                 messageId,
                 urgent: "true",
                 content_available: "true",
+                priority: "high"
             },
             android: {
-                priority: "high",  // עדיפות גבוהה
-                ttl: 3600 * 1000, // זמן חיים של 1 שעה
+                priority: "high",
+                ttl: 2419200000, // 28 days in milliseconds
+                collapseKey: messageId,
                 notification: {
-                    channelId: "fcm_channel",  // ודא שהערוץ קיים באנדרואיד
-                    icon: "ic_ws_notification",  // אייקון ההתראה באנדרואיד
-                    sound: "default"
+                    channelId: "fcm_channel",
+                    icon: "ic_ws_notification",
+                    sound: "default",
+                    priority: "high",
+                    visibility: "public",
+                    importance: "high",
+                    defaultVibrateTimings: true,
+                    defaultSound: true,
+                    sticky: true
                 },
                 data: {
-                    title: String(payload.title),
-                    body: String(payload.body),
-                    icon: String(payload.icon || defaultIcon),
-                    badge: String(payload.badge || 'default'),
-                    sound: "default",
-                    wakeUpApp: String(true),
-                    type: String(payload.type ?? "regular"),
-                    silent: String(payload.silent ?? false),
-                    requireInteraction: String(true),
-                    content_available: "true",
+                    click_action: "FLUTTER_NOTIFICATION_CLICK",
+                    wakeUpScreen: "true",
+                    priority: "high",
+                    content_available: "true"
                 }
             },
             apns: {
                 headers: {
-                    "apns-priority": "10"
+                    "apns-priority": "10",
+                    "apns-push-type": "alert",
+                    "apns-expiration": "2419200"  // 28 days
                 },
                 payload: {
                     aps: {
@@ -418,7 +422,10 @@ async function sendNotification(userId, payload) {
                             title: payload.title,
                             body: payload.body
                         },
-                        sound: "default"
+                        sound: "default",
+                        'content-available': 1,
+                        priority: 10,
+                        badge: 1
                     }
                 }
             },
