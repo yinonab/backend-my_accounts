@@ -337,157 +337,70 @@ async function saveSubscription(token, userId) {
 // }
 
 async function sendNotification(userId, payload) {
-    console.log("🎯 [4] Entered sendNotification function");
-    console.log("📤 Payload received:", JSON.stringify(payload));
-
-    const defaultIcon = "https://res.cloudinary.com/dzqnyehxn/image/upload/v1739858070/belll_fes617.png";
-    const messageId = payload.id || `msg_${Date.now()}`;
-    const isSilent = payload.type === "keep-alive";
-
-    console.log('🚀 Initiating HIGH PRIORITY notification:', {
-        messageId,
-        userId,
-        isSilent,
-        payloadSummary: {
-            title: payload.title,
-            body: payload.body?.substring(0, 50) + (payload.body?.length > 50 ? '...' : ''),
-            type: payload.type || 'regular'
-        }
-    });
-
+    const messageId = `${userId}_${Date.now()}`;
+    
     try {
         const collection = await dbService.getCollection(COLLECTION_NAME);
         const userSubscription = await collection.findOne({ userId });
 
         if (!userSubscription?.token) {
-            console.error('❌ [FCM-ERROR] No valid token for user', { userId });
+            logger.warn(`No valid token for user ${userId}`);
             return { success: false, error: 'MISSING_TOKEN' };
         }
 
-        console.log("📦 Preparing message to send:", JSON.stringify(payload, null, 2));
+        const defaultIcon = "https://res.cloudinary.com/dzqnyehxn/image/upload/v1739858070/belll_fes617.png";
+        const isSilent = payload.type === "keep-alive";
+
+        console.log('🚀 Initiating HIGH PRIORITY notification:', {
+            messageId,
+            userId,
+            isSilent,
+            payloadSummary: {
+                title: payload.title,
+                body: payload.body?.substring(0, 50) + (payload.body?.length > 50 ? '...' : ''),
+                type: payload.type || 'regular'
+            }
+        });
 
         const message = {
             notification: {
                 title: payload.title,
                 body: payload.body,
-                image: payload.icon || defaultIcon // אם לא הוגדר אייקון, השתמש בברירת מחדל
+                image: payload.icon || defaultIcon
             },
             data: {
-                title: String(payload.title),
-                body: String(payload.body),
-                icon: String(payload.icon || defaultIcon),
-                badge: String(payload.badge || 'default'),
-                sound: "default",
-                wakeUpApp: String(true),
-                type: String(payload.type ?? "regular"),
-                silent: String(payload.silent ?? false),
-                requireInteraction: String(payload.requireInteraction ?? false),
-                timestamp: Date.now().toString(),
+                ...payload.data,
                 messageId,
-                urgent: "true",
-                content_available: "true",
+                type: payload.type || 'regular',
+                timestamp: Date.now().toString()
             },
             android: {
-                priority: "high",  // עדיפות גבוהה
-                ttl: 2419200000, // זמן חיים ארוך יותר - 28 ימים
+                priority: "high",
+                ttl: 2419200000,
                 notification: {
-                    channelId: "fcm_channel",  // ודא שהערוץ קיים באנדרואיד
-                    icon: "ic_ws_notification",  // אייקון ההתראה באנדרואיד
+                    channelId: payload.androidChannel || "fcm_channel",
+                    icon: "ic_ws_notification",
                     sound: "default",
                     visibility: "public",
-                    importance: "high"
-                },
-                data: {
-                    title: String(payload.title),
-                    body: String(payload.body),
-                    icon: String(payload.icon || defaultIcon),
-                    badge: String(payload.badge || 'default'),
-                    sound: "default",
-                    wakeUpApp: String(true),
-                    type: String(payload.type ?? "regular"),
-                    silent: String(payload.silent ?? false),
-                    requireInteraction: String(true),
-                    content_available: "true",
-                    priority: "high",
-                    click_action: "FLUTTER_NOTIFICATION_CLICK"
-                }
-            },
-            apns: {
-                headers: {
-                    "apns-priority": "10"
-                },
-                payload: {
-                    aps: {
-                        alert: {
-                            title: payload.title,
-                            body: payload.body
-                        },
-                        sound: "default"
-                    }
+                    priority: "high"
                 }
             },
             token: userSubscription.token
         };
-        console.log("📨 Sending FCM message:", JSON.stringify(message, null, 2));
-        console.log("📨 Sending FCM message with token:", userSubscription.token);
-        console.log("📨 Sending FCM message:", message);
 
-        console.log("📱 Android message configuration:", JSON.stringify(message.android, null, 2));
-        console.log("📱 APNS message configuration:", JSON.stringify(message.apns, null, 2));
-        console.log("📱 WebPush message configuration:", JSON.stringify(message.webpush, null, 2));
-
-        console.log("📨 Preparing to send message with token:", userSubscription.token);
-        console.log("Payload to send:", JSON.stringify(payload, null, 2));
-
-
+        logger.info(`Sending notification to user ${userId}, type: ${payload.type}`);
         const response = await admin.messaging().send(message);
-        console.log("✅ Notification sent successfully:", response);
-        console.log("📦 FCM response details:", JSON.stringify(response, null, 2));
-        console.log("FCM Message ID:", response.messageId);
-
-        if (response && response.failureCount > 0) {
-            console.error('❌ Failed to send some notifications:', response);
-        }
-
-
+        logger.info(`Notification sent successfully to ${userId}`);
+        
+        return { success: true, messageId: response.messageId };
     } catch (err) {
-        console.error("❌ Failed to send Firebase notification:", err);
-
-        // Log detailed error details for debugging
-        console.error("❌ Error code:", err.code || 'Unknown error code');
-        console.error("❌ Error message:", err.message || 'No error message');
-        console.error("❌ Error stack:", err.stack || 'No stack trace');
-
-        if (err.code === 'messaging/registration-token-not-registered') {
-            console.warn(`🗑️ Token is no longer valid. Removing for user: ${userId}`);
+        logger.error(`Failed to send notification to ${userId}:`, err.message);
+        
+        if (err.code === 'messaging/registration-token-not-registered' || 
+            err.code === 'messaging/invalid-registration-token') {
             await removeSubscription(userId);
         }
-
-        if (err.code === 'messaging/invalid-registration-token') {
-            console.error('❌ Invalid token detected, will remove and re-register user token.');
-            await removeSubscription(userId);
-        }
-
-        if (err.code === 'messaging/device-message-rate-exceeded') {
-            console.warn('⚠️ Rate limit exceeded, throttling messages.');
-        }
-
-        if (err.code === 'messaging/quota-exceeded') {
-            console.error('❌ FCM Quota exceeded. Consider increasing the limit or spreading the load.');
-        }
-
-        if (err.code === 'messaging/ttl-exceeded') {
-            console.warn('❌ TTL exceeded, message not delivered.');
-        }
-
-        if (err.code === 'messaging/registration-token-not-registered' || err.code === 'messaging/invalid-registration-token') {
-            console.error('❌ Invalid token detected for user', { userId, token: userSubscription.token });
-            await removeSubscription(userId);
-        }
-
-
-
-        // Log for other errors
+        
         throw err;
     }
 }

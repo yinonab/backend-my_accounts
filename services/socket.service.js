@@ -165,7 +165,7 @@ export function setupSocketAPI(http) {
         // ✅ האזנה להודעות פרטיות
         socket.on('chat-send-private-msg', async (data) => {
             logger.info(`📩 chat-send-private-msg received:`, data);
-            const { toUserId, text, imageUrl, videoUrl, tempId } = data;  // ✅ עכשיו גם videoUrl
+            const { toUserId, text, imageUrl, videoUrl, tempId } = data;
 
             if (!socket.userId || !socket.username) {
                 logger.warn(`❌ Unauthorized private message attempt from socket [id: ${socket.id}] - Missing user authentication.`);
@@ -173,43 +173,48 @@ export function setupSocketAPI(http) {
             }
 
             if (!toUserId || (text === undefined && imageUrl === undefined && videoUrl === undefined)) {
-                logger.warn(`⚠️ Missing recipient or message content: 
-                🏷️ To User ID: ${toUserId} 
-                📝 Text: "${text || 'No text'}" 
-                🖼️ Image: ${imageUrl ? 'Yes' : 'No'}"
-                🎥 Video: ${videoUrl ? 'Yes' : 'No'}"`);
+                logger.warn(`⚠️ Missing recipient or message content`);
                 return;
             }
-
 
             const privateMessage = {
                 sender: socket.userId,
                 senderName: socket.username,
                 text: text || '',
                 imageUrl: imageUrl || undefined,
-                videoUrl: videoUrl || undefined,  // ✅ הוספת וידאו
+                videoUrl: videoUrl || undefined,
                 toUserId: toUserId,
-                tempId: tempId // העברת ה-tempId ללקוח
+                tempId: tempId
             };
 
-            logger.info(`📩 Private message received:
-            📤 From: ${socket.userId} (${socket.username})
-            📬 To: ${toUserId}
-            templetid;${tempId}
-            📝 Text: "${text || 'No text'}"
-            🖼️ Image: ${imageUrl ? 'Yes' : 'No'}"
-            🎥 Video: ${videoUrl ? 'Yes' : 'No'}"`);
-
             const targetSockets = _getUserSockets(toUserId);
-
+            
+            // שליחת ההודעה לכל הסוקטים של המשתמש
             if (targetSockets.length) {
                 targetSockets.forEach(targetSocket => {
-                    logger.info(`🚀 Sending private message to: ${toUserId} socketId: ${targetSocket.id}`);
                     targetSocket.emit('chat-add-private-msg', privateMessage);
                 });
-                logger.info(`✅ Private message successfully sent to ${toUserId} on ${targetSockets.length} socket(s) - ${JSON.stringify(privateMessage)}`);
+                
+                // שליחת נוטיפיקציה רק פעם אחת, לא משנה כמה סוקטים יש
+                try {
+                    await notificationService.sendNotification(toUserId, {
+                        title: `📩 הודעה חדשה מ- ${socket.username}`,
+                        body: text || 'תמונה חדשה',
+                        type: 'chat-message',
+                        data: {
+                            messageType: 'private',
+                            senderId: socket.userId,
+                            senderName: socket.username
+                        }
+                    });
+                } catch (err) {
+                    logger.error('Failed to send notification:', err);
+                    // המשך בזרימת הקוד גם אם הנוטיפיקציה נכשלה
+                }
+
+                logger.info(`✅ Private message delivered to ${toUserId} on ${targetSockets.length} socket(s)`);
             } else {
-                logger.warn(`⚠️ No active sockets found for recipient ${toUserId}. Message could not be delivered.`);
+                logger.warn(`⚠️ No active sockets found for recipient ${toUserId}`);
             }
         });
 
