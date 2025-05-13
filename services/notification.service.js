@@ -389,11 +389,13 @@ async function sendNotification(userId, payload) {
             },
             android: {
                 priority: "high",  // עדיפות גבוהה
-                ttl: 3600 * 1000, // זמן חיים של 1 שעה
+                ttl: 2419200000, // זמן חיים ארוך יותר - 28 ימים
                 notification: {
                     channelId: "fcm_channel",  // ודא שהערוץ קיים באנדרואיד
                     icon: "ic_ws_notification",  // אייקון ההתראה באנדרואיד
-                    sound: "default"
+                    sound: "default",
+                    visibility: "public",
+                    importance: "high"
                 },
                 data: {
                     title: String(payload.title),
@@ -406,6 +408,8 @@ async function sendNotification(userId, payload) {
                     silent: String(payload.silent ?? false),
                     requireInteraction: String(true),
                     content_available: "true",
+                    priority: "high",
+                    click_action: "FLUTTER_NOTIFICATION_CLICK"
                 }
             },
             apns: {
