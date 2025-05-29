@@ -5,6 +5,7 @@ import express from 'express';
 import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
 import { config } from './config/index.js'; // ודא שהנתיב נכון!
+import admin from 'firebase-admin';
 
 dotenv.config();
 
@@ -25,6 +26,55 @@ import { setupAsyncLocalStorage } from './middlewares/setupAls.middleware.js';
 import { logger } from './services/logger.service.js';
 import { upload } from './services/cloudinary.service.js';
 
+// Initialize Firebase Admin if not already initialized
+if (!admin.apps.length) {
+    const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+    admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount),
+    });
+}
+
+// Configure notification channels
+const configureNotificationChannels = async () => {
+    try {
+        const messaging = admin.messaging();
+        
+        // Configure high priority channel
+        await messaging.setNotificationChannel({
+            channelId: 'high_importance_channel',
+            name: 'High Importance',
+            description: 'High priority notifications',
+            importance: 'high',
+            enableVibration: true,
+            enableLights: true,
+            lightColor: '#FF0000',
+            sound: 'default',
+            vibrationPattern: [100, 200, 100],
+            showBadge: true,
+            bypassDnd: true
+        });
+
+        // Configure keep-alive channel
+        await messaging.setNotificationChannel({
+            channelId: 'keep_alive_channel',
+            name: 'Keep Alive',
+            description: 'Keep-alive notifications',
+            importance: 'high',
+            enableVibration: false,
+            enableLights: false,
+            sound: 'none',
+            showBadge: false,
+            bypassDnd: true
+        });
+
+        logger.info('✅ Notification channels configured successfully');
+    } catch (error) {
+        logger.error('❌ Failed to configure notification channels:', error);
+    }
+};
+
+// Call the configuration function
+configureNotificationChannels();
 
 const app = express();
 const server = http.createServer(app);
