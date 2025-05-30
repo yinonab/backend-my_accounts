@@ -515,6 +515,25 @@ class NotificationManager {
         this.tokenStats = new Map();
     }
 
+    getStats() {
+        const stats = {
+            total: this.deliveryStats.size,
+            successful: 0,
+            failed: 0,
+            pending: 0,
+            successRate: 0
+        };
+
+        for (const [_, stat] of this.deliveryStats) {
+            if (stat.status === 'delivered') stats.successful++;
+            else if (stat.status === 'failed') stats.failed++;
+            else if (stat.status === 'pending') stats.pending++;
+        }
+
+        stats.successRate = stats.total > 0 ? stats.successful / stats.total : 0;
+        return stats;
+    }
+
     trackNotification(userId, notificationId) {
         const stats = {
             sentAt: Date.now(),
@@ -619,26 +638,6 @@ class NotificationManager {
         if (successRate > 0.8) return 'healthy';
         if (successRate > 0.5) return 'degraded';
         return 'unhealthy';
-    }
-
-    // הוספת פונקציית getStats
-    getStats() {
-        const stats = {
-            total: this.deliveryStats.size,
-            successful: 0,
-            failed: 0,
-            pending: 0,
-            successRate: 0
-        };
-
-        for (const [_, stat] of this.deliveryStats) {
-            if (stat.status === 'delivered') stats.successful++;
-            else if (stat.status === 'failed') stats.failed++;
-            else if (stat.status === 'pending') stats.pending++;
-        }
-
-        stats.successRate = stats.total > 0 ? stats.successful / stats.total : 0;
-        return stats;
     }
 }
 
@@ -933,431 +932,46 @@ class AdvancedTokenManager {
 
 const advancedTokenManager = new AdvancedTokenManager();
 
-// הוספת מנגנון ניטור משופר
-class NotificationMonitoringSystem {
+// הוספת מערכת אנליטיקה בסיסית
+class AnalyticsSystem {
     constructor() {
-        this.metrics = {
-            notifications: {
-                total: 0,
-                sent: 0,
-                failed: 0,
-                delivered: 0,
-                pending: 0
-            },
-            tokens: {
-                total: 0,
-                active: 0,
-                invalid: 0,
-                expired: 0
-            },
-            performance: {
-                avgDeliveryTime: 0,
-                maxDeliveryTime: 0,
-                minDeliveryTime: Infinity,
-                avgRetryCount: 0
-            },
-            errors: {
-                invalidToken: 0,
-                networkError: 0,
-                serverError: 0,
-                other: 0
-            }
-        };
-        this.history = [];
-        this.maxHistorySize = 1000;
+        this.events = new Map();
+        this.errors = new Map();
     }
 
-    trackNotification(notificationId, userId) {
-        this.metrics.notifications.total++;
-        this.metrics.notifications.pending++;
-        this._updateHistory('notification_created', { notificationId, userId });
+    trackError(error, context, type) {
+        const errorId = Date.now().toString();
+        this.errors.set(errorId, {
+            error: error.message,
+            stack: error.stack,
+            context,
+            type,
+            timestamp: new Date()
+        });
+        logger.error(`Error tracked: ${error.message}`, { context, type });
     }
 
-    trackNotificationSent(notificationId, token) {
-        this.metrics.notifications.sent++;
-        this.metrics.notifications.pending--;
-        this._updateHistory('notification_sent', { notificationId, token });
+    trackEvent(name, data) {
+        const eventId = Date.now().toString();
+        this.events.set(eventId, {
+            name,
+            data,
+            timestamp: new Date()
+        });
     }
 
-    trackNotificationDelivered(notificationId, deliveryTime) {
-        this.metrics.notifications.delivered++;
-        this._updatePerformanceMetrics(deliveryTime);
-        this._updateHistory('notification_delivered', { notificationId, deliveryTime });
+    getErrors() {
+        return Array.from(this.errors.values());
     }
 
-    trackNotificationFailed(notificationId, error, retryCount) {
-        this.metrics.notifications.failed++;
-        this._trackError(error);
-        this._updateRetryMetrics(retryCount);
-        this._updateHistory('notification_failed', { notificationId, error, retryCount });
-    }
-
-    trackToken(token, status) {
-        this.metrics.tokens.total++;
-        if (status === 'active') {
-            this.metrics.tokens.active++;
-        } else if (status === 'invalid') {
-            this.metrics.tokens.invalid++;
-        } else if (status === 'expired') {
-            this.metrics.tokens.expired++;
-        }
-        this._updateHistory('token_status', { token, status });
-    }
-
-    _trackError(error) {
-        if (error.code === 'messaging/invalid-registration-token') {
-            this.metrics.errors.invalidToken++;
-        } else if (error.code === 'messaging/server-unavailable') {
-            this.metrics.errors.serverError++;
-        } else if (error.code === 'messaging/network-error') {
-            this.metrics.errors.networkError++;
-        } else {
-            this.metrics.errors.other++;
-        }
-    }
-
-    _updatePerformanceMetrics(deliveryTime) {
-        const { performance } = this.metrics;
-        performance.avgDeliveryTime = (performance.avgDeliveryTime * (this.metrics.notifications.delivered - 1) + deliveryTime) / this.metrics.notifications.delivered;
-        performance.maxDeliveryTime = Math.max(performance.maxDeliveryTime, deliveryTime);
-        performance.minDeliveryTime = Math.min(performance.minDeliveryTime, deliveryTime);
-    }
-
-    _updateRetryMetrics(retryCount) {
-        const { performance } = this.metrics;
-        performance.avgRetryCount = (performance.avgRetryCount * (this.metrics.notifications.failed - 1) + retryCount) / this.metrics.notifications.failed;
-    }
-
-    _updateHistory(event, data) {
-        const entry = {
-            timestamp: Date.now(),
-            event,
-            data
-        };
-        this.history.push(entry);
-        if (this.history.length > this.maxHistorySize) {
-            this.history.shift();
-        }
-    }
-
-    getMetrics() {
-        return {
-            ...this.metrics,
-            history: this.history.slice(-100) // מחזיר 100 האירועים האחרונים
-        };
-    }
-
-    getHealthStatus() {
-        const metrics = this.getMetrics();
-        const deliveryRate = metrics.notifications.delivered / (metrics.notifications.sent || 1);
-        const errorRate = (metrics.errors.invalidToken + metrics.errors.networkError + metrics.errors.serverError + metrics.errors.other) / (metrics.notifications.sent || 1);
-        const tokenHealthRate = metrics.tokens.active / (metrics.tokens.total || 1);
-
-        return {
-            status: this._calculateHealthStatus(deliveryRate, errorRate, tokenHealthRate),
-            details: {
-                deliveryRate,
-                errorRate,
-                tokenHealthRate,
-                activeTokens: metrics.tokens.active,
-                totalTokens: metrics.tokens.total
-            }
-        };
-    }
-
-    _calculateHealthStatus(deliveryRate, errorRate, tokenHealthRate) {
-        if (deliveryRate < 0.5 || errorRate > 0.3 || tokenHealthRate < 0.3) return 'critical';
-        if (deliveryRate < 0.8 || errorRate > 0.1 || tokenHealthRate < 0.6) return 'degraded';
-        return 'healthy';
+    getEvents() {
+        return Array.from(this.events.values());
     }
 }
 
-const notificationMonitoringSystem = new NotificationMonitoringSystem();
+// יצירת מופע של מערכת האנליטיקה
+const analyticsSystem = new AnalyticsSystem();
 
-// הוספת מנגנון טיפול בשגיאות משופר
-class NotificationErrorHandler {
-    constructor() {
-        this.errorTypes = {
-            INVALID_TOKEN: 'invalid_token',
-            NETWORK: 'network',
-            SERVER: 'server',
-            RATE_LIMIT: 'rate_limit',
-            UNKNOWN: 'unknown'
-        };
-        
-        this.recoveryStrategies = new Map();
-        this.errorCounts = new Map();
-        this.maxRetries = new Map();
-        
-        // הגדרת אסטרטגיות התאוששות
-        this._setupRecoveryStrategies();
-    }
-
-    _setupRecoveryStrategies() {
-        // אסטרטגיה לטיפול בטוקנים לא תקינים
-        this.recoveryStrategies.set(this.errorTypes.INVALID_TOKEN, async (token, error) => {
-            logger.warn(`🔑 Invalid token detected: ${token}`);
-            await this._handleInvalidToken(token, error);
-        });
-
-        // אסטרטגיה לטיפול בשגיאות רשת
-        this.recoveryStrategies.set(this.errorTypes.NETWORK, async (token, error) => {
-            const retryCount = this.errorCounts.get(token) || 0;
-            if (retryCount < this.maxRetries.get(token) || 3) {
-                logger.info(`🔄 Retrying notification (${retryCount + 1}/3) for token ${token}`);
-                await this._handleNetworkError(token, error);
-            } else {
-                logger.error(`❌ Max retry attempts reached for token ${token}`);
-                this._handleFatalError(token, error);
-            }
-        });
-
-        // אסטרטגיה לטיפול בשגיאות שרת
-        this.recoveryStrategies.set(this.errorTypes.SERVER, async (token, error) => {
-            logger.error(`🔧 Server error for token ${token}`);
-            await this._handleServerError(token, error);
-        });
-
-        // אסטרטגיה לטיפול בהגבלת קצב
-        this.recoveryStrategies.set(this.errorTypes.RATE_LIMIT, async (token, error) => {
-            logger.warn(`🚫 Rate limit exceeded for token ${token}`);
-            await this._handleRateLimit(token, error);
-        });
-    }
-
-    async handleError(token, error) {
-        const errorType = this._classifyError(error);
-        logger.error(`❌ Error occurred for token ${token}:`, {
-            type: errorType,
-            message: error.message,
-            stack: error.stack
-        });
-
-        // עדכון מונה השגיאות
-        this.errorCounts.set(token, (this.errorCounts.get(token) || 0) + 1);
-
-        // קבלת אסטרטגיית התאוששות
-        const recoveryStrategy = this.recoveryStrategies.get(errorType) || 
-                               this.recoveryStrategies.get(this.errorTypes.UNKNOWN);
-
-        try {
-            await recoveryStrategy(token, error);
-        } catch (recoveryError) {
-            logger.error(`❌ Recovery failed for token ${token}:`, recoveryError);
-            this._handleFatalError(token, recoveryError);
-        }
-    }
-
-    _classifyError(error) {
-        if (error.code === 'messaging/invalid-registration-token' ||
-            error.code === 'messaging/registration-token-not-registered') {
-            return this.errorTypes.INVALID_TOKEN;
-        }
-        if (error.code === 'messaging/network-error' ||
-            error.code === 'messaging/server-unavailable') {
-            return this.errorTypes.NETWORK;
-        }
-        if (error.code === 'messaging/internal-error' ||
-            error.code === 'messaging/server-error') {
-            return this.errorTypes.SERVER;
-        }
-        if (error.code === 'messaging/quota-exceeded' ||
-            error.code === 'messaging/rate-limit-exceeded') {
-            return this.errorTypes.RATE_LIMIT;
-        }
-        return this.errorTypes.UNKNOWN;
-    }
-
-    async _handleInvalidToken(token, error) {
-        try {
-            await removeToken(token);
-            logger.info(`✅ Removed invalid token: ${token}`);
-        } catch (removeError) {
-            logger.error(`❌ Failed to remove invalid token ${token}:`, removeError);
-            this._handleFatalError(token, removeError);
-        }
-    }
-
-    async _handleNetworkError(token, error) {
-        const retryCount = this.errorCounts.get(token) || 0;
-        const delay = Math.min(1000 * Math.pow(2, retryCount), 30000); // אקספוננציאלי עם מקסימום של 30 שניות
-
-        logger.info(`⏳ Waiting ${delay}ms before retry attempt ${retryCount + 1}`);
-        await new Promise(resolve => setTimeout(resolve, delay));
-
-        try {
-            // כאן אפשר להוסיף לוגיקה לשליחה חוזרת
-            this.errorCounts.delete(token);
-        } catch (retryError) {
-            logger.error(`❌ Retry failed for token ${token}:`, retryError);
-            throw retryError;
-        }
-    }
-
-    async _handleServerError(token, error) {
-        const retryAfter = error.retryAfter || 60; // ברירת מחדל: 60 שניות
-        logger.info(`⏳ Server error recovery: waiting ${retryAfter} seconds`);
-        await new Promise(resolve => setTimeout(resolve, retryAfter * 1000));
-        await this._handleNetworkError(token, error);
-    }
-
-    async _handleRateLimit(token, error) {
-        const retryAfter = error.retryAfter || 60; // ברירת מחדל: 60 שניות
-        logger.info(`⏳ Rate limit recovery: waiting ${retryAfter} seconds`);
-        await new Promise(resolve => setTimeout(resolve, retryAfter * 1000));
-        await this._handleNetworkError(token, error);
-    }
-
-    _handleFatalError(token, error) {
-        logger.error(`💀 Fatal error for token ${token}:`, error);
-        this.errorCounts.delete(token);
-        this.maxRetries.delete(token);
-    }
-
-    resetErrorCount(token) {
-        this.errorCounts.delete(token);
-    }
-
-    setMaxRetries(token, maxRetries) {
-        this.maxRetries.set(token, maxRetries);
-    }
-}
-
-const notificationErrorHandler = new NotificationErrorHandler();
-
-// הוספת מערכת ניסיונות חוזרים מתקדמת
-class AdvancedRetrySystem {
-    constructor() {
-        this.retryStrategies = new Map();
-        this.retryHistory = new Map();
-        this.maxRetries = 3;
-        this.baseDelay = 1000; // 1 שנייה
-    }
-
-    async retry(operation, context) {
-        const strategy = this._getRetryStrategy(context);
-        let attempts = 0;
-        let lastError = null;
-
-        while (attempts < this.maxRetries) {
-            try {
-                const result = await operation();
-                this._recordSuccess(context, attempts);
-                return result;
-            } catch (error) {
-                lastError = error;
-                attempts++;
-                
-                if (!this._shouldRetry(error, context, attempts)) {
-                    break;
-                }
-
-                const delay = this._calculateDelay(attempts, strategy);
-                await this._wait(delay);
-                
-                this._recordRetry(context, error, attempts);
-            }
-        }
-
-        this._recordFailure(context, lastError, attempts);
-        throw lastError;
-    }
-
-    _getRetryStrategy(context) {
-        if (this.retryStrategies.has(context.type)) {
-            return this.retryStrategies.get(context.type);
-        }
-
-        return {
-            exponential: true,
-            jitter: true,
-            maxDelay: 30000 // 30 שניות
-        };
-    }
-
-    _shouldRetry(error, context, attempts) {
-        if (attempts >= this.maxRetries) {
-            return false;
-        }
-
-        const strategy = this._getRetryStrategy(context);
-        if (strategy.retryableErrors && !strategy.retryableErrors.includes(error.code)) {
-            return false;
-        }
-
-        return true;
-    }
-
-    _calculateDelay(attempt, strategy) {
-        let delay = strategy.exponential
-            ? this.baseDelay * Math.pow(2, attempt - 1)
-            : this.baseDelay;
-
-        if (strategy.jitter) {
-            delay = delay * (0.5 + Math.random());
-        }
-
-        return Math.min(delay, strategy.maxDelay);
-    }
-
-    _wait(ms) {
-        return new Promise(resolve => setTimeout(resolve, ms));
-    }
-
-    _recordSuccess(context, attempts) {
-        const history = this._getHistory(context);
-        history.successes++;
-        history.lastSuccess = Date.now();
-        history.attempts = attempts;
-    }
-
-    _recordRetry(context, error, attempts) {
-        const history = this._getHistory(context);
-        history.retries++;
-        history.lastError = error;
-        history.lastRetry = Date.now();
-        history.attempts = attempts;
-    }
-
-    _recordFailure(context, error, attempts) {
-        const history = this._getHistory(context);
-        history.failures++;
-        history.lastError = error;
-        history.lastFailure = Date.now();
-        history.attempts = attempts;
-    }
-
-    _getHistory(context) {
-        const key = this._getContextKey(context);
-        if (!this.retryHistory.has(key)) {
-            this.retryHistory.set(key, {
-                successes: 0,
-                failures: 0,
-                retries: 0,
-                attempts: 0,
-                lastSuccess: null,
-                lastFailure: null,
-                lastRetry: null,
-                lastError: null
-            });
-        }
-        return this.retryHistory.get(key);
-    }
-
-    _getContextKey(context) {
-        return `${context.type}-${context.id}`;
-    }
-
-    setRetryStrategy(type, strategy) {
-        this.retryStrategies.set(type, strategy);
-    }
-
-    getRetryHistory(context) {
-        return this.retryHistory.get(this._getContextKey(context));
-    }
-}
-
-// הוספת מערכת ניטור בריאות מתקדמת
 class AdvancedHealthMonitoringSystem {
     constructor() {
         this.healthChecks = new Map();
@@ -1510,17 +1124,8 @@ class AdvancedHealthMonitoringSystem {
     }
 }
 
-// יצירת מופעים של המערכות החדשות
-const retrySystem = new AdvancedRetrySystem();
+// יצירת מופע של מערכת ניטור הבריאות
 const healthMonitoringSystem = new AdvancedHealthMonitoringSystem();
-
-// הגדרת אסטרטגיות ניסיונות חוזרים
-retrySystem.setRetryStrategy('notification', {
-    exponential: true,
-    jitter: true,
-    maxDelay: 30000,
-    retryableErrors: ['ECONNRESET', 'ETIMEDOUT', 'ENOTFOUND']
-});
 
 // הגדרת בדיקות בריאות
 healthMonitoringSystem.addHealthCheck('notification_service', async () => {
@@ -1532,186 +1137,8 @@ healthMonitoringSystem.addHealthCheck('notification_service', async () => {
     };
 });
 
-healthMonitoringSystem.addHealthCheck('token_health', async () => {
-    const stats = advancedTokenManager.getTokenStats();
-    return {
-        healthy: stats.healthy > 0.8,
-        value: stats.healthy,
-        details: stats
-    };
-});
-
-// הגדרת התראות
-healthMonitoringSystem.setAlert('notification_service', {
-    threshold: 0.9,
-    severity: 'high'
-});
-
-healthMonitoringSystem.setAlert('token_health', {
-    threshold: 0.8,
-    severity: 'medium'
-});
-
 // הפעלת ניטור בריאות
 healthMonitoringSystem.startMonitoring();
-
-// הגדרת ערוצי התראות
-async function configureNotificationChannels() {
-    try {
-        // הגדרת ערוצי התראות עבור אנדרואיד
-        const androidConfig = {
-            notification: {
-                android: {
-                    notification: {
-                        channelId: 'high_importance_channel',
-                        priority: 'high',
-                        defaultSound: true,
-                        defaultVibrateTimings: true,
-                        defaultLightSettings: true
-                    }
-                }
-            }
-        };
-
-        // הגדרת ערוצי התראות עבור iOS
-        const apnsConfig = {
-            payload: {
-                aps: {
-                    sound: 'default',
-                    badge: 1,
-                    contentAvailable: true
-                }
-            },
-            headers: {
-                'apns-priority': '10'
-            }
-        };
-
-        // הגדרת ערוצי התראות עבור Web
-        const webConfig = {
-            notification: {
-                requireInteraction: true,
-                vibrate: [100, 50, 100]
-            },
-            headers: {
-                Urgency: 'high'
-            }
-        };
-
-        // שמירת ההגדרות בקובץ הקונפיגורציה
-        const notificationConfig = {
-            android: androidConfig,
-            apns: apnsConfig,
-            web: webConfig
-        };
-
-        console.log('✅ Notification channels configured successfully');
-        return notificationConfig;
-    } catch (error) {
-        console.error('❌ Failed to configure notification channels:', error);
-        // החזרת הגדרות ברירת מחדל במקרה של שגיאה
-        return {
-            android: {
-                notification: {
-                    android: {
-                        notification: {
-                            channelId: 'default_channel',
-                            priority: 'default'
-                        }
-                    }
-                }
-            }
-        };
-    }
-}
-
-// עדכון פונקציית sendNotification להשתמש בהגדרות החדשות
-async function sendNotification(params) {
-    try {
-        const { userId, title, body, type, data } = params;
-        
-        // קבלת הגדרות ערוצי ההתראות
-        const notificationConfig = await configureNotificationChannels();
-        
-        // Get user's tokens
-        const tokens = await NotificationToken.find({ userId }).select('token');
-        if (!tokens.length) {
-            throw new Error('No tokens found for user');
-        }
-
-        // Filter out unhealthy tokens
-        const healthyTokens = tokens.filter(token => {
-            const health = tokenHealthMonitor.getTokenHealth(token.token);
-            return health.status === 'healthy' || health.status === 'unknown';
-        });
-
-        if (!healthyTokens.length) {
-            throw new Error('No healthy tokens available');
-        }
-
-        // Send notification to each healthy token
-        const results = await Promise.allSettled(
-            healthyTokens.map(async ({ token }) => {
-                try {
-                    const message = {
-                        notification: {
-                            title,
-                            body
-                        },
-                        data: {
-                            type,
-                            ...data
-                        },
-                        token,
-                        ...notificationConfig
-                    };
-
-                    const response = await admin.messaging().send(message);
-                    tokenHealthMonitor.recordSuccess(token);
-                    return response;
-                } catch (error) {
-                    tokenHealthMonitor.recordFailure(token);
-                    throw error;
-                }
-            })
-        );
-
-        // Log results
-        const successful = results.filter(r => r.status === 'fulfilled').length;
-        const failed = results.filter(r => r.status === 'rejected').length;
-        
-        console.log(`Notification sent to ${successful} devices, failed for ${failed} devices`);
-
-        return {
-            success: true,
-            results: {
-                successful,
-                failed,
-                total: results.length
-            }
-        };
-    } catch (error) {
-        console.error('Error sending notification:', error);
-        throw error;
-    }
-}
-
-// הוספת תחזוקת טוקנים אוטומטית
-setInterval(async () => {
-    try {
-        await advancedTokenManager.performMaintenance();
-        const stats = advancedTokenManager.getTokenStats();
-        logger.info('🔧 Token maintenance completed:', stats);
-    } catch (error) {
-        logger.error('❌ Token maintenance failed:', error);
-    }
-}, 60 * 60 * 1000); // כל שעה
-
-// הוספת ניטור סטטיסטיקות טוקנים
-setInterval(() => {
-    const stats = tokenManager.getTokenStats();
-    logger.info('📊 Token Statistics:', stats);
-}, 60 * 60 * 1000); // כל שעה
 
 // פונקציה משופרת לשליחה לטוקן ספציפי
 async function sendToToken(token, title, body, data, retryCount = 0) {
@@ -1851,161 +1278,3 @@ export const notificationService = {
     removeSubscription,
     createIndexes
 };
-
-class TokenHealthMonitor {
-    constructor() {
-        this.healthChecks = new Map();
-        this.healthThresholds = {
-            maxFailures: 3,
-            failureWindow: 5 * 60 * 1000, // 5 minutes
-            minSuccessRate: 0.8
-        };
-    }
-
-    async monitorToken(token) {
-        const check = {
-            failures: 0,
-            successes: 0,
-            lastFailure: null,
-            lastSuccess: null,
-            status: 'healthy'
-        };
-        this.healthChecks.set(token, check);
-        return check;
-    }
-
-    recordFailure(token) {
-        const check = this.healthChecks.get(token);
-        if (!check) return;
-
-        check.failures++;
-        check.lastFailure = Date.now();
-
-        // Check if token should be marked as unhealthy
-        if (check.failures >= this.healthThresholds.maxFailures) {
-            check.status = 'unhealthy';
-            this.handleUnhealthyToken(token);
-        }
-    }
-
-    recordSuccess(token) {
-        const check = this.healthChecks.get(token);
-        if (!check) return;
-
-        check.successes++;
-        check.lastSuccess = Date.now();
-
-        // Reset failure count if success rate is good
-        const totalAttempts = check.failures + check.successes;
-        if (totalAttempts >= 10 && (check.successes / totalAttempts) >= this.healthThresholds.minSuccessRate) {
-            check.failures = 0;
-            check.status = 'healthy';
-        }
-    }
-
-    async handleUnhealthyToken(token) {
-        try {
-            // Remove token from database
-            await NotificationToken.deleteOne({ token });
-            
-            // Notify user about token issue
-            await this.notifyTokenIssue(token);
-            
-            // Remove from health checks
-            this.healthChecks.delete(token);
-        } catch (error) {
-            console.error('Error handling unhealthy token:', error);
-        }
-    }
-
-    async notifyTokenIssue(token) {
-        try {
-            const user = await NotificationToken.findOne({ token }).select('userId');
-            if (!user) return;
-
-            await this.sendNotification({
-                userId: user.userId,
-                title: 'בעיה בהתראות',
-                body: 'נדרש לרענן את ההתראות. לחץ כאן לרענון.',
-                type: 'token_issue',
-                data: {
-                    action: 'renew_token',
-                    token
-                }
-            });
-        } catch (error) {
-            console.error('Error notifying about token issue:', error);
-        }
-    }
-
-    getTokenHealth(token) {
-        return this.healthChecks.get(token) || { status: 'unknown' };
-    }
-}
-
-// Create instance
-const tokenHealthMonitor = new TokenHealthMonitor();
-
-// הוספת מערכת אנליטיקה בסיסית
-class AnalyticsSystem {
-    constructor() {
-        this.events = new Map();
-        this.errors = new Map();
-    }
-
-    trackError(error, context, type) {
-        const errorId = Date.now().toString();
-        this.errors.set(errorId, {
-            error: error.message,
-            stack: error.stack,
-            context,
-            type,
-            timestamp: new Date()
-        });
-        logger.error(`Error tracked: ${error.message}`, { context, type });
-    }
-
-    trackEvent(name, data) {
-        const eventId = Date.now().toString();
-        this.events.set(eventId, {
-            name,
-            data,
-            timestamp: new Date()
-        });
-    }
-
-    getErrors() {
-        return Array.from(this.errors.values());
-    }
-
-    getEvents() {
-        return Array.from(this.events.values());
-    }
-}
-
-// יצירת מופע של מערכת האנליטיקה
-const analyticsSystem = new AnalyticsSystem();
-
-// עדכון הקריאה ל-advancedAnalyticsSystem
-class AdvancedHealthMonitoringSystem {
-    // ... existing code ...
-
-    _triggerAlert(name, status, alert) {
-        logger.error('Health check alert:', {
-            name,
-            status,
-            alert
-        });
-
-        // שימוש במערכת האנליטיקה החדשה
-        analyticsSystem.trackError(
-            new Error(`Health check failed: ${name}`),
-            null,
-            'system'
-        );
-    }
-
-    // ... existing code ...
-}
-
-// ... existing code ...
