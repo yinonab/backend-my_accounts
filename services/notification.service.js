@@ -2159,3 +2159,38 @@ class TokenHealthMonitor {
 
 // Create instance
 const tokenHealthMonitor = new TokenHealthMonitor();
+
+// הגדרת ערוצי התראות
+async function configureNotificationChannels() {
+    try {
+        const messaging = admin.messaging();
+        
+        // הגדרת ערוץ התראות חשוב
+        await messaging.createNotificationChannel({
+            id: 'high_importance_channel',
+            name: 'High Importance Notifications',
+            description: 'This channel is used for important notifications',
+            importance: 'high',
+            vibration: true,
+            sound: 'default'
+        });
+
+        // הגדרת ערוץ התראות רגיל
+        await messaging.createNotificationChannel({
+            id: 'default_channel',
+            name: 'Default Notifications',
+            description: 'This channel is used for regular notifications',
+            importance: 'default',
+            vibration: true,
+            sound: 'default'
+        });
+
+        console.log('✅ Notification channels configured successfully');
+    } catch (error) {
+        console.error('❌ Failed to configure notification channels:', error);
+        // המשך הרצה גם אם הגדרת הערוצים נכשלה
+    }
+}
+
+// קריאה לפונקציה בהפעלת השרת
+configureNotificationChannels();
