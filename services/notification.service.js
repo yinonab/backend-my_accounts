@@ -2031,6 +2031,34 @@ setInterval(async () => {
     }
 }, 3600000);
 
+async function saveSubscription(userId, subscription) {
+    try {
+        const tokenInfo = {
+            token: subscription.endpoint,
+            userId: userId,
+            platform: subscription.platform || 'web',
+            createdAt: new Date(),
+            lastUsed: new Date(),
+            status: 'active',
+            metadata: {
+                keys: subscription.keys,
+                expirationTime: subscription.expirationTime
+            }
+        };
+
+        await NotificationToken.findOneAndUpdate(
+            { token: subscription.endpoint },
+            tokenInfo,
+            { upsert: true, new: true }
+        );
+
+        return true;
+    } catch (error) {
+        console.error('Error saving subscription:', error);
+        return false;
+    }
+}
+
 export const notificationService = {
     saveSubscription,
     sendNotification,
