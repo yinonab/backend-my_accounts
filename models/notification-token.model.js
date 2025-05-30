@@ -4,12 +4,14 @@ const notificationTokenSchema = new mongoose.Schema({
     token: {
         type: String,
         required: true,
-        unique: true
+        unique: true,
+        index: true
     },
     userId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
-        required: true
+        required: true,
+        index: true
     },
     platform: {
         type: String,
@@ -27,7 +29,8 @@ const notificationTokenSchema = new mongoose.Schema({
     status: {
         type: String,
         enum: ['active', 'inactive', 'expired'],
-        default: 'active'
+        default: 'active',
+        index: true
     },
     metadata: {
         deviceInfo: {
@@ -42,10 +45,5 @@ const notificationTokenSchema = new mongoose.Schema({
 }, {
     timestamps: true
 })
-
-// אינדקסים לשיפור ביצועים
-notificationTokenSchema.index({ token: 1 })
-notificationTokenSchema.index({ userId: 1 })
-notificationTokenSchema.index({ status: 1 })
 
 export const NotificationToken = mongoose.model('NotificationToken', notificationTokenSchema) 
