@@ -7,6 +7,7 @@ import { dbService } from './db.service.js';
 import { logger } from './logger.service.js';
 import dotenv from 'dotenv';
 import crypto from 'crypto';
+import { NotificationToken } from '../models/notification-token.model.js'
 dotenv.config(); // וודא שזה נטען
 if (!admin.apps.length) {
     const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);  // טען את המפתח מתוך משתנה הסביבה
@@ -2108,28 +2109,29 @@ setInterval(async () => {
 async function saveSubscription(userId, subscription) {
     try {
         const tokenInfo = {
-            token: subscription.endpoint,
+            token: subscription.token,
             userId: userId,
             platform: subscription.platform || 'web',
             createdAt: new Date(),
             lastUsed: new Date(),
             status: 'active',
             metadata: {
-                keys: subscription.keys,
-                expirationTime: subscription.expirationTime
+                deviceInfo: subscription.deviceInfo || {},
+                appVersion: subscription.appVersion || '1.0.0'
             }
-        };
+        }
 
-        await NotificationToken.findOneAndUpdate(
-            { token: subscription.endpoint },
+        const result = await NotificationToken.findOneAndUpdate(
+            { token: subscription.token },
             tokenInfo,
             { upsert: true, new: true }
-        );
+        )
 
-        return true;
+        logger.info(`✅ Successfully saved notification token for user ${userId}`)
+        return true
     } catch (error) {
-        console.error('Error saving subscription:', error);
-        return false;
+        logger.error(`❌ Error saving notification token: ${error.message}`)
+        return false
     }
 }
 
