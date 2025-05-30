@@ -34,47 +34,78 @@ if (!admin.apps.length) {
     });
 }
 
-// Configure notification channels
+// הגדרת ערוצי התראות
 const configureNotificationChannels = async () => {
     try {
-        const messaging = admin.messaging();
-        
-        // Configure high priority channel
-        await messaging.setNotificationChannel({
-            channelId: 'high_importance_channel',
-            name: 'High Importance',
-            description: 'High priority notifications',
-            importance: 'high',
-            enableVibration: true,
-            enableLights: true,
-            lightColor: '#FF0000',
-            sound: 'default',
-            vibrationPattern: [100, 200, 100],
-            showBadge: true,
-            bypassDnd: true
-        });
+        // הגדרת ערוצי התראות עבור אנדרואיד
+        const androidConfig = {
+            notification: {
+                android: {
+                    notification: {
+                        channelId: 'high_importance_channel',
+                        priority: 'high',
+                        defaultSound: true,
+                        defaultVibrateTimings: true,
+                        defaultLightSettings: true
+                    }
+                }
+            }
+        };
 
-        // Configure keep-alive channel
-        await messaging.setNotificationChannel({
-            channelId: 'keep_alive_channel',
-            name: 'Keep Alive',
-            description: 'Keep-alive notifications',
-            importance: 'high',
-            enableVibration: false,
-            enableLights: false,
-            sound: 'none',
-            showBadge: false,
-            bypassDnd: true
-        });
+        // הגדרת ערוצי התראות עבור iOS
+        const apnsConfig = {
+            payload: {
+                aps: {
+                    sound: 'default',
+                    badge: 1,
+                    contentAvailable: true
+                }
+            },
+            headers: {
+                'apns-priority': '10'
+            }
+        };
 
-        logger.info('✅ Notification channels configured successfully');
+        // הגדרת ערוצי התראות עבור Web
+        const webConfig = {
+            notification: {
+                requireInteraction: true,
+                vibrate: [100, 50, 100]
+            },
+            headers: {
+                Urgency: 'high'
+            }
+        };
+
+        // שמירת ההגדרות בקובץ הקונפיגורציה
+        const notificationConfig = {
+            android: androidConfig,
+            apns: apnsConfig,
+            web: webConfig
+        };
+
+        console.log('✅ Notification channels configured successfully');
+        return notificationConfig;
     } catch (error) {
-        logger.error('❌ Failed to configure notification channels:', error);
+        console.error('❌ Failed to configure notification channels:', error);
+        // החזרת הגדרות ברירת מחדל במקרה של שגיאה
+        return {
+            android: {
+                notification: {
+                    android: {
+                        notification: {
+                            channelId: 'default_channel',
+                            priority: 'default'
+                        }
+                    }
+                }
+            }
+        };
     }
 };
 
 // Call the configuration function
-configureNotificationChannels();
+const notificationConfig = configureNotificationChannels();
 
 const app = express();
 const server = http.createServer(app);
