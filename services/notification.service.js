@@ -1535,10 +1535,83 @@ healthMonitoringSystem.setAlert('token_health', {
 // הפעלת ניטור בריאות
 healthMonitoringSystem.startMonitoring();
 
-// עדכון פונקציית שליחת ההתראות
+// הגדרת ערוצי התראות
+async function configureNotificationChannels() {
+    try {
+        // הגדרת ערוצי התראות עבור אנדרואיד
+        const androidConfig = {
+            notification: {
+                android: {
+                    notification: {
+                        channelId: 'high_importance_channel',
+                        priority: 'high',
+                        defaultSound: true,
+                        defaultVibrateTimings: true,
+                        defaultLightSettings: true
+                    }
+                }
+            }
+        };
+
+        // הגדרת ערוצי התראות עבור iOS
+        const apnsConfig = {
+            payload: {
+                aps: {
+                    sound: 'default',
+                    badge: 1,
+                    contentAvailable: true
+                }
+            },
+            headers: {
+                'apns-priority': '10'
+            }
+        };
+
+        // הגדרת ערוצי התראות עבור Web
+        const webConfig = {
+            notification: {
+                requireInteraction: true,
+                vibrate: [100, 50, 100]
+            },
+            headers: {
+                Urgency: 'high'
+            }
+        };
+
+        // שמירת ההגדרות בקובץ הקונפיגורציה
+        const notificationConfig = {
+            android: androidConfig,
+            apns: apnsConfig,
+            web: webConfig
+        };
+
+        console.log('✅ Notification channels configured successfully');
+        return notificationConfig;
+    } catch (error) {
+        console.error('❌ Failed to configure notification channels:', error);
+        // החזרת הגדרות ברירת מחדל במקרה של שגיאה
+        return {
+            android: {
+                notification: {
+                    android: {
+                        notification: {
+                            channelId: 'default_channel',
+                            priority: 'default'
+                        }
+                    }
+                }
+            }
+        };
+    }
+}
+
+// עדכון פונקציית sendNotification להשתמש בהגדרות החדשות
 async function sendNotification(params) {
     try {
         const { userId, title, body, type, data } = params;
+        
+        // קבלת הגדרות ערוצי ההתראות
+        const notificationConfig = await configureNotificationChannels();
         
         // Get user's tokens
         const tokens = await NotificationToken.find({ userId }).select('token');
@@ -1569,7 +1642,8 @@ async function sendNotification(params) {
                             type,
                             ...data
                         },
-                        token
+                        token,
+                        ...notificationConfig
                     };
 
                     const response = await admin.messaging().send(message);
@@ -2159,38 +2233,3 @@ class TokenHealthMonitor {
 
 // Create instance
 const tokenHealthMonitor = new TokenHealthMonitor();
-
-// הגדרת ערוצי התראות
-async function configureNotificationChannels() {
-    try {
-        const messaging = admin.messaging();
-        
-        // הגדרת ערוץ התראות חשוב
-        await messaging.createNotificationChannel({
-            id: 'high_importance_channel',
-            name: 'High Importance Notifications',
-            description: 'This channel is used for important notifications',
-            importance: 'high',
-            vibration: true,
-            sound: 'default'
-        });
-
-        // הגדרת ערוץ התראות רגיל
-        await messaging.createNotificationChannel({
-            id: 'default_channel',
-            name: 'Default Notifications',
-            description: 'This channel is used for regular notifications',
-            importance: 'default',
-            vibration: true,
-            sound: 'default'
-        });
-
-        console.log('✅ Notification channels configured successfully');
-    } catch (error) {
-        console.error('❌ Failed to configure notification channels:', error);
-        // המשך הרצה גם אם הגדרת הערוצים נכשלה
-    }
-}
-
-// קריאה לפונקציה בהפעלת השרת
-configureNotificationChannels();
