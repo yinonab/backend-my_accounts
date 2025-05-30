@@ -1243,8 +1243,27 @@ async function removeSubscription(userId) {
     }
 }
 
+// הוספת פונקציית חיבור למסד הנתונים
+async function ensureDatabaseConnection() {
+    try {
+        const collection = await dbService.getCollection('notificationtokens');
+        await collection.findOne({}); // בדיקת חיבור
+        logger.info('✅ Database connection verified');
+        return true;
+    } catch (error) {
+        logger.error('❌ Database connection error:', error);
+        return false;
+    }
+}
+
 async function saveSubscription(userId, subscription) {
     try {
+        // וידוא חיבור למסד הנתונים
+        const isConnected = await ensureDatabaseConnection();
+        if (!isConnected) {
+            throw new Error('Database connection failed');
+        }
+
         const tokenInfo = {
             token: subscription.token,
             userId: userId,
@@ -1259,7 +1278,7 @@ async function saveSubscription(userId, subscription) {
         }
 
         // בדיקה אם הטוקן כבר קיים
-        const existingToken = await NotificationToken.findOne({ token: subscription.token })
+        const existingToken = await NotificationToken.findOne({ token: subscription.token }).exec();
         if (existingToken) {
             // עדכון הטוקן הקיים
             await NotificationToken.updateOne(
@@ -1271,23 +1290,48 @@ async function saveSubscription(userId, subscription) {
                         metadata: tokenInfo.metadata
                     }
                 }
-            )
-            logger.info(`✅ Updated existing notification token for user ${userId}`)
+            ).exec();
+            logger.info(`✅ Updated existing notification token for user ${userId}`);
         } else {
             // יצירת טוקן חדש
-            await NotificationToken.create(tokenInfo)
-            logger.info(`✅ Created new notification token for user ${userId}`)
+            await NotificationToken.create(tokenInfo);
+            logger.info(`✅ Created new notification token for user ${userId}`);
         }
 
         // הוספת הטוקן למנהל הטוקנים המתקדם
-        await advancedTokenManager.addToken(subscription.token, userId, tokenInfo.metadata)
+        await advancedTokenManager.addToken(subscription.token, userId, tokenInfo.metadata);
         
-        return true
+        return true;
     } catch (error) {
-        logger.error(`❌ Error saving notification token: ${error.message}`)
-        return false
+        logger.error(`❌ Error saving notification token: ${error.message}`);
+        
+        // ניסיון חוזר אם זו שגיאת חיבור
+        if (error.message.includes('buffering timed out') || error.message.includes('connection failed')) {
+            logger.info('🔄 Attempting to reconnect to database...');
+            await new Promise(resolve => setTimeout(resolve, 2000)); // המתנה של 2 שניות
+            return saveSubscription(userId, subscription); // ניסיון חוזר
+        }
+        
+        return false;
     }
 }
+
+// הוספת פונקציית ניקוי טוקנים ישנים
+async function cleanupOldTokens() {
+    try {
+        const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+        await NotificationToken.deleteMany({
+            lastUsed: { $lt: thirtyDaysAgo },
+            status: { $ne: 'active' }
+        });
+        logger.info('🧹 Cleaned up old notification tokens');
+    } catch (error) {
+        logger.error('❌ Error cleaning up old tokens:', error);
+    }
+}
+
+// הפעלת ניקוי תקופתי
+setInterval(cleanupOldTokens, 24 * 60 * 60 * 1000); // פעם ביום
 
 // פונקציה לשליחת התראות
 async function sendNotification(params) {
