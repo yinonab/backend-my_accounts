@@ -620,6 +620,26 @@ class NotificationManager {
         if (successRate > 0.5) return 'degraded';
         return 'unhealthy';
     }
+
+    // הוספת פונקציית getStats
+    getStats() {
+        const stats = {
+            total: this.deliveryStats.size,
+            successful: 0,
+            failed: 0,
+            pending: 0,
+            successRate: 0
+        };
+
+        for (const [_, stat] of this.deliveryStats) {
+            if (stat.status === 'delivered') stats.successful++;
+            else if (stat.status === 'failed') stats.failed++;
+            else if (stat.status === 'pending') stats.pending++;
+        }
+
+        stats.successRate = stats.total > 0 ? stats.successful / stats.total : 0;
+        return stats;
+    }
 }
 
 const notificationManager = new NotificationManager();
@@ -1418,8 +1438,7 @@ class AdvancedHealthMonitoringSystem {
             alert
         });
 
-        // שליחת התראה למערכת הניטור
-        advancedAnalyticsSystem.trackError(
+        analyticsSystem.trackError(
             new Error(`Health check failed: ${name}`),
             null,
             'system'
@@ -1505,7 +1524,7 @@ retrySystem.setRetryStrategy('notification', {
 
 // הגדרת בדיקות בריאות
 healthMonitoringSystem.addHealthCheck('notification_service', async () => {
-    const stats = await notificationManager.getStats();
+    const stats = notificationManager.getStats();
     return {
         healthy: stats.successRate > 0.9,
         value: stats.successRate,
@@ -1776,17 +1795,8 @@ async function handleFailedToken(token, error) {
 // פונקציה לקבלת כל הטוקנים של משתמש
 async function getUserTokens(userId) {
     try {
-        const user = await User.findById(userId);
-        if (!user) {
-            console.log('⚠️ User not found:', userId);
-            return [];
-        }
-
-        // קבלת טוקנים פעילים בלבד
-        const activeTokens = user.fcmTokens.filter(token => token.isActive);
-        console.log(`📱 Found ${activeTokens.length} active tokens for user:`, userId);
-        
-        return activeTokens.map(token => token.token);
+        const tokens = await NotificationToken.find({ userId, status: 'active' });
+        return tokens.map(token => token.token);
     } catch (error) {
         console.error('❌ Error getting user tokens:', error);
         return [];
@@ -1797,314 +1807,14 @@ async function removeSubscription(userId) {
     console.log(`🗑️ Removing subscription for user: ${userId}`);
 
     try {
-        const collection = await dbService.getCollection(COLLECTION_NAME);
-        const deleteResult = await collection.updateOne({ userId }, { $unset: { token: "" } });
-
-        console.log('✅ Subscription removal result:', {
-            userId,
-            modifiedCount: deleteResult.modifiedCount
-        });
-
-        logger.info(`Removed invalid FCM token for user: ${userId}`);
+        await NotificationToken.deleteMany({ userId });
+        console.log('✅ Subscription removal successful');
+        logger.info(`Removed subscriptions for user: ${userId}`);
     } catch (err) {
         console.error('❌ Failed to remove subscription:', err);
         throw err;
     }
 }
-
-// הוספת מערכת דיווחים וממשק ניהול
-class ReportingSystem {
-    constructor() {
-        this.reports = new Map();
-        this.dashboards = new Map();
-        this.exportFormats = ['csv', 'json', 'pdf'];
-    }
-
-    async generateReport(type, params) {
-        const report = await this._generateReportData(type, params);
-        this.reports.set(report.id, report);
-        return report;
-    }
-
-    async _generateReportData(type, params) {
-        const reportId = `${type}-${Date.now()}`;
-        let data;
-
-        switch (type) {
-            case 'notification_stats':
-                data = await this._generateNotificationStats(params);
-                break;
-            case 'token_health':
-                data = await this._generateTokenHealthReport(params);
-                break;
-            case 'error_analysis':
-                data = await this._generateErrorAnalysis(params);
-                break;
-            default:
-                throw new Error('Unknown report type');
-        }
-
-        return {
-            id: reportId,
-            type,
-            timestamp: Date.now(),
-            data
-        };
-    }
-
-    async _generateNotificationStats(params) {
-        const stats = {
-            total: 0,
-            byType: {},
-            byUser: {},
-            byTime: {
-                hourly: {},
-                daily: {},
-                weekly: {}
-            },
-            successRate: 0,
-            averageDeliveryTime: 0
-        };
-
-        // איסוף נתונים מהמערכות השונות
-        const notifications = await dbService.getCollection('notifications').find().toArray();
-        
-        notifications.forEach(notification => {
-            stats.total++;
-            
-            // סטטיסטיקות לפי סוג
-            stats.byType[notification.type] = (stats.byType[notification.type] || 0) + 1;
-            
-            // סטטיסטיקות לפי משתמש
-            stats.byUser[notification.userId] = (stats.byUser[notification.userId] || 0) + 1;
-            
-            // סטטיסטיקות לפי זמן
-            const date = new Date(notification.timestamp);
-            const hour = date.getHours();
-            const day = date.toISOString().split('T')[0];
-            const week = this._getWeekNumber(date);
-            
-            stats.byTime.hourly[hour] = (stats.byTime.hourly[hour] || 0) + 1;
-            stats.byTime.daily[day] = (stats.byTime.daily[day] || 0) + 1;
-            stats.byTime.weekly[week] = (stats.byTime.weekly[week] || 0) + 1;
-        });
-
-        return stats;
-    }
-
-    async _generateTokenHealthReport(params) {
-        const tokens = await dbService.getCollection('tokens').find().toArray();
-        const healthStats = {
-            total: tokens.length,
-            byStatus: {},
-            byPlatform: {},
-            byHealth: {
-                healthy: 0,
-                warning: 0,
-                critical: 0
-            }
-        };
-
-        tokens.forEach(token => {
-            const health = advancedTokenManager.getTokenHealth(token.token);
-            
-            healthStats.byStatus[token.status] = (healthStats.byStatus[token.status] || 0) + 1;
-            healthStats.byPlatform[token.platform] = (healthStats.byPlatform[token.platform] || 0) + 1;
-            healthStats.byHealth[health]++;
-        });
-
-        return healthStats;
-    }
-
-    async _generateErrorAnalysis(params) {
-        const errors = await dbService.getCollection('notification_errors').find().toArray();
-        const analysis = {
-            total: errors.length,
-            byType: {},
-            byToken: {},
-            byUser: {},
-            trends: {
-                hourly: {},
-                daily: {},
-                weekly: {}
-            }
-        };
-
-        errors.forEach(error => {
-            analysis.byType[error.type] = (analysis.byType[error.type] || 0) + 1;
-            analysis.byToken[error.token] = (analysis.byToken[error.token] || 0) + 1;
-            analysis.byUser[error.userId] = (analysis.byUser[error.userId] || 0) + 1;
-
-            const date = new Date(error.timestamp);
-            const hour = date.getHours();
-            const day = date.toISOString().split('T')[0];
-            const week = this._getWeekNumber(date);
-
-            analysis.trends.hourly[hour] = (analysis.trends.hourly[hour] || 0) + 1;
-            analysis.trends.daily[day] = (analysis.trends.daily[day] || 0) + 1;
-            analysis.trends.weekly[week] = (analysis.trends.weekly[week] || 0) + 1;
-        });
-
-        return analysis;
-    }
-
-    _getWeekNumber(date) {
-        const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-        const dayNum = d.getUTCDay() || 7;
-        d.setUTCDate(d.getUTCDate() + 4 - dayNum);
-        const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-        return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
-    }
-
-    async exportReport(reportId, format) {
-        const report = this.reports.get(reportId);
-        if (!report) {
-            throw new Error('Report not found');
-        }
-
-        if (!this.exportFormats.includes(format)) {
-            throw new Error('Unsupported export format');
-        }
-
-        switch (format) {
-            case 'csv':
-                return this._exportToCSV(report);
-            case 'json':
-                return this._exportToJSON(report);
-            case 'pdf':
-                return this._exportToPDF(report);
-            default:
-                throw new Error('Export format not implemented');
-        }
-    }
-
-    async _exportToCSV(report) {
-        // מימוש ייצוא ל-CSV
-        return 'CSV data';
-    }
-
-    async _exportToJSON(report) {
-        return JSON.stringify(report.data, null, 2);
-    }
-
-    async _exportToPDF(report) {
-        // מימוש ייצוא ל-PDF
-        return 'PDF data';
-    }
-}
-
-// הוספת מערכת בדיקות אוטומטיות
-class AutomatedTestingSystem {
-    constructor() {
-        this.tests = new Map();
-        this.results = new Map();
-        this.suites = new Map();
-    }
-
-    async runTests(suiteName) {
-        const suite = this.suites.get(suiteName);
-        if (!suite) {
-            throw new Error('Test suite not found');
-        }
-
-        const results = {
-            suite: suiteName,
-            startTime: Date.now(),
-            tests: [],
-            summary: {
-                total: 0,
-                passed: 0,
-                failed: 0,
-                skipped: 0
-            }
-        };
-
-        for (const test of suite.tests) {
-            const testResult = await this._runTest(test);
-            results.tests.push(testResult);
-            
-            results.summary.total++;
-            if (testResult.status === 'passed') {
-                results.summary.passed++;
-            } else if (testResult.status === 'failed') {
-                results.summary.failed++;
-            } else {
-                results.summary.skipped++;
-            }
-        }
-
-        results.endTime = Date.now();
-        results.duration = results.endTime - results.startTime;
-        
-        this.results.set(`${suiteName}-${Date.now()}`, results);
-        return results;
-    }
-
-    async _runTest(test) {
-        const result = {
-            name: test.name,
-            startTime: Date.now(),
-            status: 'pending',
-            error: null
-        };
-
-        try {
-            await test.fn();
-            result.status = 'passed';
-        } catch (error) {
-            result.status = 'failed';
-            result.error = error;
-        }
-
-        result.endTime = Date.now();
-        result.duration = result.endTime - result.startTime;
-        
-        return result;
-    }
-
-    addTestSuite(name, tests) {
-        this.suites.set(name, {
-            name,
-            tests: tests.map(test => ({
-                name: test.name,
-                fn: test.fn
-            }))
-        });
-    }
-}
-
-// יצירת מופעים של המערכות החדשות
-const reportingSystem = new ReportingSystem();
-const testingSystem = new AutomatedTestingSystem();
-
-// הוספת סדרות בדיקות
-testingSystem.addTestSuite('notification', [
-    {
-        name: 'send notification',
-        fn: async () => {
-            const result = await sendNotification('test-user', 'Test', 'Test message');
-            if (!result) throw new Error('Notification send failed');
-        }
-    },
-    {
-        name: 'token validation',
-        fn: async () => {
-            const token = 'test-token';
-            const isValid = await securitySystem.validateToken(token, 'test-user');
-            if (!isValid) throw new Error('Token validation failed');
-        }
-    }
-]);
-
-// הפעלת בדיקות אוטומטיות כל שעה
-setInterval(async () => {
-    try {
-        const results = await testingSystem.runTests('notification');
-        logger.info('Test results:', results);
-    } catch (error) {
-        logger.error('Test execution failed:', error);
-    }
-}, 3600000);
 
 async function saveSubscription(userId, subscription) {
     try {
@@ -2235,3 +1945,67 @@ class TokenHealthMonitor {
 
 // Create instance
 const tokenHealthMonitor = new TokenHealthMonitor();
+
+// הוספת מערכת אנליטיקה בסיסית
+class AnalyticsSystem {
+    constructor() {
+        this.events = new Map();
+        this.errors = new Map();
+    }
+
+    trackError(error, context, type) {
+        const errorId = Date.now().toString();
+        this.errors.set(errorId, {
+            error: error.message,
+            stack: error.stack,
+            context,
+            type,
+            timestamp: new Date()
+        });
+        logger.error(`Error tracked: ${error.message}`, { context, type });
+    }
+
+    trackEvent(name, data) {
+        const eventId = Date.now().toString();
+        this.events.set(eventId, {
+            name,
+            data,
+            timestamp: new Date()
+        });
+    }
+
+    getErrors() {
+        return Array.from(this.errors.values());
+    }
+
+    getEvents() {
+        return Array.from(this.events.values());
+    }
+}
+
+// יצירת מופע של מערכת האנליטיקה
+const analyticsSystem = new AnalyticsSystem();
+
+// עדכון הקריאה ל-advancedAnalyticsSystem
+class AdvancedHealthMonitoringSystem {
+    // ... existing code ...
+
+    _triggerAlert(name, status, alert) {
+        logger.error('Health check alert:', {
+            name,
+            status,
+            alert
+        });
+
+        // שימוש במערכת האנליטיקה החדשה
+        analyticsSystem.trackError(
+            new Error(`Health check failed: ${name}`),
+            null,
+            'system'
+        );
+    }
+
+    // ... existing code ...
+}
+
+// ... existing code ...
