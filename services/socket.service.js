@@ -1163,3 +1163,92 @@ function startStatsMonitoring() {
 
 // התחלת ניטור סטטיסטיקות
 startStatsMonitoring();
+
+// Initialize connection manager
+const connectionManager = {
+    connections: new Map(),
+    getConnectionStats: () => {
+        return {
+            total: connectionManager.connections.size,
+            active: Array.from(connectionManager.connections.values()).filter(conn => conn.isActive).length
+        };
+    },
+    addConnection: (socketId, details) => {
+        connectionManager.connections.set(socketId, {
+            ...details,
+            isActive: true,
+            lastHeartbeat: Date.now()
+        });
+    },
+    removeConnection: (socketId) => {
+        connectionManager.connections.delete(socketId);
+    },
+    updateHeartbeat: (socketId) => {
+        const connection = connectionManager.connections.get(socketId);
+        if (connection) {
+            connection.lastHeartbeat = Date.now();
+            connection.isActive = true;
+        }
+    }
+};
+
+// Update the heartbeat handler
+socket.on('heartbeat', () => {
+    try {
+        connectionManager.updateHeartbeat(socket.id);
+        socket.emit('heartbeat_ack');
+        logger.info(`❤️‍🔥 Heartbeat received from [id: ${socket.id}]`);
+    } catch (error) {
+        logger.error(`❌ Error processing heartbeat: ${error.message}`);
+    }
+});
+
+// Update the connection handler
+socket.on('connect', () => {
+    try {
+        connectionManager.addConnection(socket.id, {
+            userAgent: socket.handshake.headers['user-agent'],
+            transport: socket.conn.transport.name,
+            ip: socket.handshake.address
+        });
+        logger.info(`✅ New connected socket [id: ${socket.id}]`);
+        logger.info(`🖥️ Connection details | ${JSON.stringify({
+            userAgent: socket.handshake.headers['user-agent'],
+            transport: socket.conn.transport.name,
+            ip: socket.handshake.address
+        })}`);
+    } catch (error) {
+        logger.error(`❌ Error handling new connection: ${error.message}`);
+    }
+});
+
+// Update the disconnection handler
+socket.on('disconnect', () => {
+    try {
+        connectionManager.removeConnection(socket.id);
+        logger.info(`👋 Socket disconnected [id: ${socket.id}]`);
+    } catch (error) {
+        logger.error(`❌ Error handling disconnection: ${error.message}`);
+    }
+});
+
+// Update the cleanup function
+const cleanupDeadSockets = () => {
+    try {
+        const now = Date.now();
+        const deadTimeout = 30000; // 30 seconds
+
+        for (const [socketId, connection] of connectionManager.connections.entries()) {
+            if (now - connection.lastHeartbeat > deadTimeout) {
+                connectionManager.removeConnection(socketId);
+                logger.info(`🧹 Removed dead socket [id: ${socketId}]`);
+            }
+        }
+
+        const stats = connectionManager.getConnectionStats();
+        logger.info(`🧹 Running global cleanup for dead sockets...`);
+        logger.info(`✅ Cleanup complete. Active users: ${stats.active}`);
+    } catch (error) {
+        logger.error(`❌ Error during socket cleanup: ${error.message}`);
+    }
+};
