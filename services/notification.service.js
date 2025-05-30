@@ -1258,17 +1258,156 @@ async function saveSubscription(userId, subscription) {
             }
         }
 
-        const result = await NotificationToken.findOneAndUpdate(
-            { token: subscription.token },
-            tokenInfo,
-            { upsert: true, new: true }
-        )
+        // בדיקה אם הטוקן כבר קיים
+        const existingToken = await NotificationToken.findOne({ token: subscription.token })
+        if (existingToken) {
+            // עדכון הטוקן הקיים
+            await NotificationToken.updateOne(
+                { token: subscription.token },
+                { 
+                    $set: {
+                        lastUsed: new Date(),
+                        status: 'active',
+                        metadata: tokenInfo.metadata
+                    }
+                }
+            )
+            logger.info(`✅ Updated existing notification token for user ${userId}`)
+        } else {
+            // יצירת טוקן חדש
+            await NotificationToken.create(tokenInfo)
+            logger.info(`✅ Created new notification token for user ${userId}`)
+        }
 
-        logger.info(`✅ Successfully saved notification token for user ${userId}`)
+        // הוספת הטוקן למנהל הטוקנים המתקדם
+        await advancedTokenManager.addToken(subscription.token, userId, tokenInfo.metadata)
+        
         return true
     } catch (error) {
         logger.error(`❌ Error saving notification token: ${error.message}`)
         return false
+    }
+}
+
+// פונקציה לשליחת התראות
+async function sendNotification(params) {
+    try {
+        const { userId, title, body, type, data } = params;
+        
+        // Get user's tokens
+        const tokens = await NotificationToken.find({ 
+            userId, 
+            status: 'active',
+            lastUsed: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) } // רק טוקנים פעילים ב-30 יום האחרונים
+        }).select('token platform metadata');
+
+        if (!tokens.length) {
+            logger.warn(`⚠️ No active tokens found for user ${userId}`);
+            return {
+                success: false,
+                error: 'No active tokens found'
+            };
+        }
+
+        // Send notification to each token
+        const results = await Promise.allSettled(
+            tokens.map(async ({ token, platform, metadata }) => {
+                try {
+                    const message = {
+                        notification: {
+                            title,
+                            body
+                        },
+                        data: {
+                            type,
+                            ...data,
+                            platform,
+                            timestamp: Date.now()
+                        },
+                        token,
+                        android: {
+                            priority: 'high',
+                            notification: {
+                                channelId: 'high_importance_channel',
+                                priority: 'max',
+                                sound: 'default',
+                                defaultSound: true,
+                                defaultVibrateTimings: true,
+                                defaultLightSettings: true
+                            }
+                        },
+                        apns: {
+                            payload: {
+                                aps: {
+                                    sound: 'default',
+                                    badge: 1,
+                                    contentAvailable: true
+                                }
+                            },
+                            headers: {
+                                'apns-priority': '10'
+                            }
+                        },
+                        webpush: {
+                            headers: {
+                                Urgency: 'high'
+                            },
+                            notification: {
+                                requireInteraction: true,
+                                vibrate: [100, 50, 100]
+                            }
+                        }
+                    };
+
+                    const response = await admin.messaging().send(message);
+                    
+                    // עדכון סטטיסטיקות הטוקן
+                    await advancedTokenManager.updateTokenStatus(token, 'active');
+                    
+                    return {
+                        token,
+                        platform,
+                        success: true,
+                        response
+                    };
+                } catch (error) {
+                    logger.error(`❌ Error sending to token ${token}:`, error);
+                    
+                    // טיפול בשגיאות ספציפיות
+                    if (error.code === 'messaging/invalid-registration-token' ||
+                        error.code === 'messaging/registration-token-not-registered') {
+                        await NotificationToken.updateOne(
+                            { token },
+                            { $set: { status: 'invalid' } }
+                        );
+                        await advancedTokenManager.updateTokenStatus(token, 'invalid', error);
+                    } else {
+                        await advancedTokenManager.updateTokenStatus(token, 'error', error);
+                    }
+                    
+                    throw error;
+                }
+            })
+        );
+
+        // ניתוח התוצאות
+        const successful = results.filter(r => r.status === 'fulfilled').length;
+        const failed = results.filter(r => r.status === 'rejected').length;
+        
+        logger.info(`📊 Notification results for user ${userId}: ${successful} successful, ${failed} failed`);
+
+        return {
+            success: true,
+            results: {
+                successful,
+                failed,
+                total: results.length,
+                details: results.map(r => r.status === 'fulfilled' ? r.value : r.reason)
+            }
+        };
+    } catch (error) {
+        logger.error(`❌ Error sending notification:`, error);
+        throw error;
     }
 }
 

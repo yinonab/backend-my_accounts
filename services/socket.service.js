@@ -17,12 +17,14 @@ class ConnectionManager {
         this.connections = new Map()
         this.reconnectAttempts = new Map()
         this.lastPingTime = new Map()
+        this.connectionTimeouts = new Map()
     }
 
     getConnectionStats() {
         return {
             total: this.connections.size,
-            active: Array.from(this.connections.values()).filter(conn => conn.isActive).length
+            active: Array.from(this.connections.values()).filter(conn => conn.isActive).length,
+            reconnecting: Array.from(this.reconnectAttempts.values()).filter(attempts => attempts > 0).length
         }
     }
 
@@ -30,12 +32,28 @@ class ConnectionManager {
         this.connections.set(socketId, {
             ...details,
             isActive: true,
-            lastHeartbeat: Date.now()
+            lastHeartbeat: Date.now(),
+            connectedAt: Date.now()
         })
+        
+        // הגדרת timeout לניקוי אוטומטי
+        const timeout = setTimeout(() => {
+            this.handleDeadConnection(socketId)
+        }, CONNECTION_CHECK_INTERVAL * 2)
+        
+        this.connectionTimeouts.set(socketId, timeout)
     }
 
     removeConnection(socketId) {
+        const timeout = this.connectionTimeouts.get(socketId)
+        if (timeout) {
+            clearTimeout(timeout)
+            this.connectionTimeouts.delete(socketId)
+        }
+        
         this.connections.delete(socketId)
+        this.reconnectAttempts.delete(socketId)
+        this.lastPingTime.delete(socketId)
     }
 
     updateHeartbeat(socketId) {
@@ -43,13 +61,54 @@ class ConnectionManager {
         if (connection) {
             connection.lastHeartbeat = Date.now()
             connection.isActive = true
+            
+            // איפוס ניסיונות החיבור מחדש
+            this.reconnectAttempts.set(socketId, 0)
+            
+            // עדכון ה-timeout
+            const timeout = this.connectionTimeouts.get(socketId)
+            if (timeout) {
+                clearTimeout(timeout)
+            }
+            
+            const newTimeout = setTimeout(() => {
+                this.handleDeadConnection(socketId)
+            }, CONNECTION_CHECK_INTERVAL * 2)
+            
+            this.connectionTimeouts.set(socketId, newTimeout)
         }
     }
 
     handleDisconnect(socketId) {
-        this.removeConnection(socketId)
-        this.reconnectAttempts.delete(socketId)
-        this.lastPingTime.delete(socketId)
+        const attempts = (this.reconnectAttempts.get(socketId) || 0) + 1
+        this.reconnectAttempts.set(socketId, attempts)
+        
+        if (attempts >= MAX_RECONNECT_ATTEMPTS) {
+            this.removeConnection(socketId)
+            logger.info(`❌ Max reconnection attempts reached for socket [id: ${socketId}]`)
+        } else {
+            logger.info(`⚠️ Socket disconnected [id: ${socketId}]. Attempt ${attempts}/${MAX_RECONNECT_ATTEMPTS}`)
+        }
+    }
+
+    handleDeadConnection(socketId) {
+        const connection = this.connections.get(socketId)
+        if (connection && Date.now() - connection.lastHeartbeat > CONNECTION_CHECK_INTERVAL * 2) {
+            logger.warn(`💀 Dead connection detected [id: ${socketId}]`)
+            this.removeConnection(socketId)
+            
+            // ניסיון לשלוח התראה למשתמש
+            const userId = connection.userId
+            if (userId) {
+                emitTestNotification({
+                    userId,
+                    data: {
+                        title: "⚠️ Connection Lost",
+                        body: "Your connection was lost. Please check your internet connection."
+                    }
+                })
+            }
+        }
     }
 }
 
@@ -119,7 +178,8 @@ export function setupSocketAPI(http) {
         connectionManager.addConnection(socket.id, {
             userAgent: socket.handshake.headers['user-agent'],
             transport: socket.conn.transport.name,
-            ip: socket.handshake.address
+            ip: socket.handshake.address,
+            userId: socket.userId
         })
 
         // הגדרת event handlers
@@ -133,13 +193,18 @@ export function setupSocketAPI(http) {
             }
         })
 
-        socket.on('disconnect', () => {
+        socket.on('disconnect', (reason) => {
             try {
+                logger.info(`👋 Socket disconnected [id: ${socket.id}]. Reason: ${reason}`)
                 connectionManager.handleDisconnect(socket.id)
-                logger.info(`👋 Socket disconnected [id: ${socket.id}]`)
             } catch (error) {
                 logger.error(`❌ Error handling disconnection: ${error.message}`)
             }
+        })
+
+        socket.on('error', (error) => {
+            logger.error(`❌ Socket error [id: ${socket.id}]: ${error.message}`)
+            connectionManager.handleDisconnect(socket.id)
         })
 
         // שאר ה-event handlers הקיימים
