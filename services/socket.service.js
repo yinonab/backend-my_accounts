@@ -1,8 +1,8 @@
 import { logger } from './logger.service.js'
 import { Server } from 'socket.io'
-import { jwt } from 'jsonwebtoken'
-import { config } from '../config'
-import { userService } from './user.service'
+import jwt from 'jsonwebtoken'
+import config from '../config/dev.js'
+import { userService } from './user.service.js'
 
 let io = null
 let connectedUsers = new Map()

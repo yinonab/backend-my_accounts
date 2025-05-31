@@ -4,7 +4,7 @@ import cors from 'cors';
 import express from 'express';
 import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
-import { config } from './config/index.js'; // ודא שהנתיב נכון!
+import config from './config/dev.js'; // שינוי הייבוא
 import admin from 'firebase-admin';
 
 dotenv.config();
