@@ -1222,41 +1222,27 @@ async function handleFailedToken(token, error) {
 // פונקציה לקבלת כל הטוקנים של משתמש
 async function getUserTokens(userId) {
     try {
-        const tokens = await NotificationToken.find({ userId, status: 'active' });
+        // וידוא חיבור למסד הנתונים
+        const isConnected = await ensureDatabaseConnection();
+        if (!isConnected) {
+            throw new Error('Database connection failed');
+        }
+
+        // קבלת כל הטוקנים הפעילים של המשתמש
+        const tokens = await NotificationToken.find({
+            userId,
+            status: 'active',
+            lastUsed: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) } // טוקנים ששימשו ב-30 ימים האחרונים
+        });
+
         return tokens.map(token => token.token);
     } catch (error) {
-        console.error('❌ Error getting user tokens:', error);
-        return [];
+        logger.error('❌ Error getting user tokens:', error);
+        throw error;
     }
 }
 
 async function removeSubscription(userId) {
-    console.log(`🗑️ Removing subscription for user: ${userId}`);
-
-    try {
-        await NotificationToken.deleteMany({ userId });
-        console.log('✅ Subscription removal successful');
-        logger.info(`Removed subscriptions for user: ${userId}`);
-    } catch (err) {
-        console.error('❌ Failed to remove subscription:', err);
-        throw err;
-    }
-}
-
-// הוספת פונקציית חיבור למסד הנתונים
-async function ensureDatabaseConnection() {
-    try {
-        const collection = await dbService.getCollection('notificationtokens');
-        await collection.findOne({}); // בדיקת חיבור
-        logger.info('✅ Database connection verified');
-        return true;
-    } catch (error) {
-        logger.error('❌ Database connection error:', error);
-        return false;
-    }
-}
-
-async function saveSubscription(userId, subscription) {
     try {
         // וידוא חיבור למסד הנתונים
         const isConnected = await ensureDatabaseConnection();
@@ -1264,55 +1250,105 @@ async function saveSubscription(userId, subscription) {
             throw new Error('Database connection failed');
         }
 
-        const tokenInfo = {
-            token: subscription.token,
-            userId: userId,
-            platform: subscription.platform || 'web',
-            createdAt: new Date(),
-            lastUsed: new Date(),
-            status: 'active',
-            metadata: {
-                deviceInfo: subscription.deviceInfo || {},
-                appVersion: subscription.appVersion || '1.0.0'
-            }
-        }
-
-        // בדיקה אם הטוקן כבר קיים
-        const existingToken = await NotificationToken.findOne({ token: subscription.token }).exec();
-        if (existingToken) {
-            // עדכון הטוקן הקיים
-            await NotificationToken.updateOne(
-                { token: subscription.token },
-                { 
-                    $set: {
-                        lastUsed: new Date(),
-                        status: 'active',
-                        metadata: tokenInfo.metadata
-                    }
-                }
-            ).exec();
-            logger.info(`✅ Updated existing notification token for user ${userId}`);
-        } else {
-            // יצירת טוקן חדש
-            await NotificationToken.create(tokenInfo);
-            logger.info(`✅ Created new notification token for user ${userId}`);
-        }
-
-        // הוספת הטוקן למנהל הטוקנים המתקדם
-        await advancedTokenManager.addToken(subscription.token, userId, tokenInfo.metadata);
+        // מחיקת כל הטוקנים של המשתמש
+        await NotificationToken.deleteMany({ userId });
+        logger.info('✅ User subscriptions removed successfully');
         
+        return { success: true };
+    } catch (error) {
+        logger.error('❌ Error removing subscriptions:', error);
+        throw error;
+    }
+}
+
+// הוספת פונקציית חיבור למסד הנתונים
+async function ensureDatabaseConnection() {
+    try {
+        const collection = await dbService.getCollection(COLLECTION_NAME);
+        await collection.findOne({}); // בדיקת חיבור
+        logger.info('✅ Database connection verified');
         return true;
     } catch (error) {
-        logger.error(`❌ Error saving notification token: ${error.message}`);
+        logger.error('❌ Database connection error:', error);
+        logger.info('🔄 Attempting to reconnect to database...');
         
-        // ניסיון חוזר אם זו שגיאת חיבור
-        if (error.message.includes('buffering timed out') || error.message.includes('connection failed')) {
-            logger.info('🔄 Attempting to reconnect to database...');
+        // ניסיון חוזר לחיבור
+        try {
+            await dbService.closeConnection();
             await new Promise(resolve => setTimeout(resolve, 2000)); // המתנה של 2 שניות
-            return saveSubscription(userId, subscription); // ניסיון חוזר
+            const collection = await dbService.getCollection(COLLECTION_NAME);
+            await collection.findOne({});
+            logger.info('✅ Database reconnected successfully');
+            return true;
+        } catch (retryError) {
+            logger.error('❌ Database reconnection failed:', retryError);
+            return false;
         }
-        
-        return false;
+    }
+}
+
+async function saveSubscription(userId, subscription) {
+    const MAX_RETRIES = 3;
+    const RETRY_DELAY = 2000;
+    let retries = 0;
+
+    while (retries < MAX_RETRIES) {
+        try {
+            // וידוא חיבור למסד הנתונים
+            const isConnected = await ensureDatabaseConnection();
+            if (!isConnected) {
+                throw new Error('Database connection failed');
+            }
+
+            const collection = await dbService.getCollection(COLLECTION_NAME);
+            
+            // בדיקה אם הטוקן כבר קיים
+            const existingToken = await NotificationToken.findOne({ token: subscription.token });
+            
+            if (existingToken) {
+                // עדכון טוקן קיים
+                await NotificationToken.updateOne(
+                    { token: subscription.token },
+                    {
+                        $set: {
+                            lastUsed: new Date(),
+                            status: 'active',
+                            metadata: {
+                                ...subscription.metadata,
+                                updatedAt: new Date()
+                            }
+                        }
+                    }
+                );
+                logger.info('✅ Existing token updated successfully');
+            } else {
+                // יצירת טוקן חדש
+                const tokenInfo = {
+                    token: subscription.token,
+                    userId,
+                    platform: subscription.platform || 'web',
+                    createdAt: new Date(),
+                    lastUsed: new Date(),
+                    status: 'active',
+                    metadata: subscription.metadata || {}
+                };
+                
+                await NotificationToken.create(tokenInfo);
+                logger.info('✅ New token saved successfully');
+            }
+
+            return { success: true };
+        } catch (error) {
+            retries++;
+            logger.error(`❌ Error saving notification token (attempt ${retries}/${MAX_RETRIES}):`, error);
+            
+            if (retries === MAX_RETRIES) {
+                throw error;
+            }
+            
+            // המתנה לפני ניסיון חוזר
+            await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
+        }
     }
 }
 
