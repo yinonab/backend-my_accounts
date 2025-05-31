@@ -1,8 +1,11 @@
 import { logger } from './logger.service.js'
 import { Server } from 'socket.io'
+import { jwt } from 'jsonwebtoken'
+import { config } from '../config'
+import { userService } from './user.service'
 
-let gIo = null
-const userSocketsMap = new Map()
+let io = null
+let connectedUsers = new Map()
 
 // הגדרת קבועים
 const HEARTBEAT_INTERVAL = 10000 // 10 שניות
@@ -114,24 +117,47 @@ class ConnectionManager {
 
 // פונקציית התחלת השרת
 export function setupSocketAPI(http) {
-    if (gIo) {
+    if (io) {
         logger.info('Socket API already initialized')
         return
     }
 
-    gIo = new Server(http, {
+    io = new Server(http, {
         cors: {
-            origin: '*',
+            origin: config.baseURL,
             methods: ['GET', 'POST'],
             credentials: true,
             transports: ['websocket', 'polling']
         },
         allowEIO3: true,
         pingInterval: HEARTBEAT_INTERVAL,
-        pingTimeout: CONNECTION_CHECK_INTERVAL
+        pingTimeout: CONNECTION_CHECK_INTERVAL,
+        connectTimeout: 45000
     })
 
     const connectionManager = new ConnectionManager()
+
+    io.use(async (socket, next) => {
+        try {
+            const token = socket.handshake.auth.token
+            if (!token) {
+                return next(new Error('Authentication error'))
+            }
+
+            const decoded = jwt.verify(token, process.env.JWT_SECRET)
+            const user = await userService.getById(decoded._id)
+            
+            if (!user) {
+                return next(new Error('User not found'))
+            }
+
+            socket.user = user
+            next()
+        } catch (err) {
+            logger.error('Socket authentication error:', err)
+            next(new Error('Authentication error'))
+        }
+    })
 
     // הגדרת ניקוי תקופתי
     setInterval(() => {
@@ -159,7 +185,7 @@ export function setupSocketAPI(http) {
         try {
             for (const [socketId, connection] of connectionManager.connections.entries()) {
                 if (connection.isActive) {
-                    const socket = gIo.sockets.sockets.get(socketId)
+                    const socket = io.sockets.sockets.get(socketId)
                     if (socket) {
                         socket.emit('keep-alive')
                     }
@@ -171,15 +197,16 @@ export function setupSocketAPI(http) {
     }, KEEP_ALIVE_INTERVAL)
 
     // טיפול בחיבורים חדשים
-    gIo.on('connection', socket => {
-        logger.info(`New connected socket [id: ${socket.id}]`)
+    io.on('connection', socket => {
+        logger.info(`User connected: ${socket.user._id}`)
+        connectedUsers.set(socket.user._id, socket)
         
         // הוספת החיבור למנהל החיבורים
         connectionManager.addConnection(socket.id, {
             userAgent: socket.handshake.headers['user-agent'],
             transport: socket.conn.transport.name,
             ip: socket.handshake.address,
-            userId: socket.userId
+            userId: socket.user._id
         })
 
         // הגדרת event handlers
@@ -197,6 +224,7 @@ export function setupSocketAPI(http) {
             try {
                 logger.info(`👋 Socket disconnected [id: ${socket.id}]. Reason: ${reason}`)
                 connectionManager.handleDisconnect(socket.id)
+                connectedUsers.delete(socket.user._id)
             } catch (error) {
                 logger.error(`❌ Error handling disconnection: ${error.message}`)
             }
@@ -205,6 +233,7 @@ export function setupSocketAPI(http) {
         socket.on('error', (error) => {
             logger.error(`❌ Socket error [id: ${socket.id}]: ${error.message}`)
             connectionManager.handleDisconnect(socket.id)
+            connectedUsers.delete(socket.user._id)
         })
 
         // שאר ה-event handlers הקיימים
@@ -218,10 +247,10 @@ export function setupSocketAPI(http) {
         })
 
         socket.on('user-ready', () => {
-            logger.info(`User ready [userId=${socket.userId}, socketId=${socket.id}]`)
-            if (!socket.userId) return
+            logger.info(`User ready [userId=${socket.user._id}, socketId=${socket.id}]`)
+            if (!socket.user._id) return
             emitTestNotification({
-                userId: socket.userId,
+                userId: socket.user._id,
                 data: {
                     title: "📢 Welcome!",
                     body: "Ready for notifications! 🚀"
@@ -229,15 +258,31 @@ export function setupSocketAPI(http) {
             })
         })
 
-        // ... שאר ה-event handlers הקיימים ...
+        socket.on('reconnect_attempt', (attemptNumber) => {
+            logger.info(`Reconnection attempt ${attemptNumber} for user ${socket.user._id}`)
+        })
+
+        socket.on('reconnect', (attemptNumber) => {
+            logger.info(`Reconnected after ${attemptNumber} attempts for user ${socket.user._id}`)
+        })
+
+        socket.on('reconnect_error', (error) => {
+            logger.error(`Reconnection error for user ${socket.user._id}:`, error)
+        })
+
+        socket.on('reconnect_failed', () => {
+            logger.error(`Failed to reconnect for user ${socket.user._id}`)
+        })
     })
+
+    return io
 }
 
 // פונקציות עזר
 function _getUserSockets(userId) {
-    const socketSet = userSocketsMap.get(userId) || new Set()
+    const socketSet = connectedUsers.get(userId) || new Set()
     return Array.from(socketSet)
-        .map(socketId => gIo.sockets.sockets.get(socketId))
+        .map(socketId => io.sockets.sockets.get(socketId))
         .filter(socket => socket && socket.connected)
 }
 
@@ -247,7 +292,7 @@ async function emitTestNotification({ userId, data, attempt = 1 }) {
         return
     }
 
-    const socketSet = userSocketsMap.get(userId) || new Set()
+    const socketSet = connectedUsers.get(userId) || new Set()
     const socketIds = Array.from(socketSet)
 
     logger.info(`🔍 emitTestNotification: Attempt ${attempt} for userId=${userId}`)
@@ -264,7 +309,7 @@ async function emitTestNotification({ userId, data, attempt = 1 }) {
     }
 
     for (const socketId of socketIds) {
-        const socket = gIo.sockets.sockets.get(socketId)
+        const socket = io.sockets.sockets.get(socketId)
         if (socket && socket.connected) {
             socket.emit('test-notification', data)
             logger.info(`✅ Sent test-notification to socketId=${socket.id}`)
@@ -276,14 +321,14 @@ async function emitTestNotification({ userId, data, attempt = 1 }) {
 }
 
 function cleanupDeadSocket(socketId, userId) {
-    const socketSet = userSocketsMap.get(userId)
+    const socketSet = connectedUsers.get(userId)
     if (!socketSet) return
 
     socketSet.delete(socketId)
     logger.info(`🧹 Removed dead socket [id: ${socketId}] for userId=${userId}`)
 
     if (socketSet.size === 0) {
-        userSocketsMap.delete(userId)
+        connectedUsers.delete(userId)
         logger.info(`❌ No active sockets left for userId=${userId}, removing from map.`)
     }
 }
@@ -291,5 +336,8 @@ function cleanupDeadSocket(socketId, userId) {
 // ייצוא הפונקציות הנדרשות
 export const socketService = {
     setupSocketAPI,
-    emitTestNotification
+    emitTestNotification,
+    getIO,
+    emitToUser,
+    emitToAll
 }
