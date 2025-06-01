@@ -333,6 +333,36 @@ function cleanupDeadSocket(socketId, userId) {
     }
 }
 
+function getIO() {
+    if (!io) {
+        throw new Error('Socket.io not initialized')
+    }
+    return io
+}
+
+function emitToUser(userId, eventName, data) {
+    try {
+        const socket = connectedUsers.get(userId)
+        if (socket) {
+            socket.emit(eventName, data)
+            logger.info(`Emitted ${eventName} to user ${userId}`)
+        } else {
+            logger.warn(`No socket found for user ${userId}`)
+        }
+    } catch (error) {
+        logger.error(`Error emitting to user ${userId}:`, error)
+    }
+}
+
+function emitToAll(eventName, data) {
+    try {
+        io.emit(eventName, data)
+        logger.info(`Emitted ${eventName} to all users`)
+    } catch (error) {
+        logger.error('Error emitting to all users:', error)
+    }
+}
+
 // ייצוא הפונקציות הנדרשות
 export const socketService = {
     setupSocketAPI,
