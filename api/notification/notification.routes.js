@@ -108,8 +108,6 @@ router.post('/send', log, requireAuth, async (req, res) => {
         console.log("🚀 Sending notification to user:", userId);
         await notificationService.sendNotification(userId, { title, body, token, type, icon });
 
-        socketService.cleanupDuplicateSocketRefs(userId);
-
         socketService.emitTestNotification({
             userId,
             data: {
