@@ -657,10 +657,14 @@ class AdvancedTokenManager {
     }
 
     async addToken(token, userId, metadata = {}) {
+        // Use the centralized function to save/update in DB
+        await saveOrUpdateToken(token, userId, metadata);
+
+        // Update in-memory cache
         const tokenInfo = {
             token,
             userId,
-            createdAt: Date.now(),
+            createdAt: Date.now(), // This will be overwritten by DB value on load
             lastUsed: Date.now(),
             status: 'active',
             metadata: {
@@ -677,12 +681,11 @@ class AdvancedTokenManager {
                 errorHistory: []
             }
         };
-
         this.tokens.set(token, tokenInfo);
         this._updateTokenGroups(token, tokenInfo);
         this._scheduleMaintenance(token);
-        await this._saveTokenToDatabase(tokenInfo);
-        
+        // No need to call _saveTokenToDatabase here as it's done in saveOrUpdateToken
+
         return tokenInfo;
     }
 
@@ -705,19 +708,6 @@ class AdvancedTokenManager {
         const maintenanceInterval = 24 * 60 * 60 * 1000; // 24 שעות
         const nextMaintenance = Date.now() + maintenanceInterval;
         this.maintenanceSchedule.set(token, nextMaintenance);
-    }
-
-    async _saveTokenToDatabase(tokenInfo) {
-        try {
-            const collection = await dbService.getCollection('tokens');
-            await collection.updateOne(
-                { token: tokenInfo.token },
-                { $set: tokenInfo },
-                { upsert: true }
-            );
-        } catch (error) {
-            logger.error('Failed to save token to database:', error);
-        }
     }
 
     async updateTokenStatus(token, status, error = null) {
@@ -1290,68 +1280,53 @@ async function ensureDatabaseConnection() {
     }
 }
 
-async function saveSubscription(userId, subscription) {
-    const MAX_RETRIES = 3;
-    const RETRY_DELAY = 2000;
-    let retries = 0;
-
-    while (retries < MAX_RETRIES) {
-        try {
-            // וידוא חיבור למסד הנתונים
-            const isConnected = await ensureDatabaseConnection();
-            if (!isConnected) {
-                throw new Error('Database connection failed');
-            }
-
-            const collection = await dbService.getCollection(COLLECTION_NAME);
-            
-            // בדיקה אם הטוקן כבר קיים
-            const existingToken = await NotificationToken.findOne({ token: subscription.token });
-            
-            if (existingToken) {
-                // עדכון טוקן קיים
-                await NotificationToken.updateOne(
-                    { token: subscription.token },
-                    {
-                        $set: {
-                            lastUsed: new Date(),
-                            status: 'active',
-                            metadata: {
-                                ...subscription.metadata,
-                                updatedAt: new Date()
-                            }
-                        }
-                    }
-                );
-                logger.info('✅ Existing token updated successfully');
-            } else {
-                // יצירת טוקן חדש
-                const tokenInfo = {
-                    token: subscription.token,
+// Centralized function to save or update a token
+async function saveOrUpdateToken(token, userId, metadata = {}) {
+    try {
+        const collection = await dbService.getCollection('tokens');
+        const result = await collection.updateOne(
+            { token: token },
+            { 
+                $set: { 
                     userId,
-                    platform: subscription.platform || 'web',
-                    createdAt: new Date(),
+                    platform: metadata.platform || 'unknown',
                     lastUsed: new Date(),
-                    status: 'active',
-                    metadata: subscription.metadata || {}
-                };
-                
-                await NotificationToken.create(tokenInfo);
-                logger.info('✅ New token saved successfully');
-            }
+                    status: 'active', // Assume active on save/update
+                    metadata: metadata // Store full metadata
+                },
+                $setOnInsert: { 
+                    createdAt: new Date() 
+                } // Set createdAt only on insert
+            },
+            { upsert: true } // Create document if it doesn't exist
+        );
+        console.log('✅ Token saved/updated successfully:', result);
+        return result;
+    } catch (error) {
+        logger.error('❌ Failed to save or update token:', error);
+        throw error; // Re-throw to indicate failure
+    }
+}
 
-            return { success: true };
-        } catch (error) {
-            retries++;
-            logger.error(`❌ Error saving notification token (attempt ${retries}/${MAX_RETRIES}):`, error);
-            
-            if (retries === MAX_RETRIES) {
-                throw error;
-            }
-            
-            // המתנה לפני ניסיון חוזר
-            await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
+// Modify saveSubscription to use the new centralized function
+async function saveSubscription(userId, subscription) {
+    try {
+        if (!subscription || !subscription.token) {
+            throw new Error("Subscription object or token is missing");
         }
+        const token = subscription.token;
+        const platform = subscription.endpoint?.includes('webpush') ? 'web' : 'unknown'; // Infer platform if possible
+        
+        // Use the centralized function to save/update the token
+        await saveOrUpdateToken(token, userId, { ...subscription, platform });
+
+        // Optional: If you still need to save something to the 'notifications' collection
+        // based on the original structure, you can add that logic here.
+        // For now, we focus on fixing the token duplication.
+        
+    } catch (error) {
+        logger.error('❌ Error in saveSubscription:', error);
+        throw error; // Re-throw to indicate failure
     }
 }
 

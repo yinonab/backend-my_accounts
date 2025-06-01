@@ -6,6 +6,7 @@ import { notificationService } from '../../services/notification.service.js';
 import { config } from '../../config/index.js';
 import { dbService } from '../../services/db.service.js';
 import { socketService } from '../../services/socket.service.js';
+import { NotificationToken } from '../../models/notificationToken.model.js';
 
 
 
@@ -56,21 +57,22 @@ router.get('/vapid-public-key', async (req, res) => {
 router.get('/get-subscription', requireAuth, async (req, res) => {
     try {
         const userId = req.loggedinUser._id;
-        console.log("🔍 Checking subscription for user:", userId);
+        console.log("🔍 Checking token for user:", userId);
 
-        const collection = await dbService.getCollection(COLLECTION_NAME);
-        const userSubscription = await collection.findOne({ userId });
+        // קריאה מקולקציית tokens באמצעות המודל
+        const userToken = await NotificationToken.findOne({ userId });
 
-        if (!userSubscription) {
-            console.warn(`⚠️ No subscription found for user: ${userId}`);
-            return res.status(404).json({ error: 'No subscription found' });
+        if (!userToken) {
+            console.warn(`⚠️ No token found for user: ${userId}`);
+            return res.status(404).json({ error: 'No token found' });
         }
 
-        console.log("✅ Found subscription:", userSubscription);
-        res.status(200).json({ subscription: userSubscription.subscription });
+        console.log("✅ Found token:", userToken);
+        // החזרת אובייקט ה-token כפי שהקליינט מצפה לקבל
+        res.status(200).json({ token: userToken.token });
     } catch (err) {
-        console.error('❌ Error retrieving subscription:', err);
-        res.status(500).json({ error: 'Failed to retrieve subscription' });
+        console.error('❌ Error retrieving token:', err);
+        res.status(500).json({ error: 'Failed to retrieve token' });
     }
 });
 
