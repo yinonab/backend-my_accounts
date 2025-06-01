@@ -95,7 +95,6 @@ router.post('/send', log, requireAuth, async (req, res) => {
 
         const userId = req.loggedinUser._id;
         const { title, body, token, type, icon } = req.body;
-        //  console.log("📩 Notification send request received:", { userId, payload });
         console.log('Extracted userId from token:', req.loggedinUser._id);
         console.log('🚀 Preparing to send notification');
         console.log('👤 User ID from Token:', userId);
@@ -110,15 +109,21 @@ router.post('/send', log, requireAuth, async (req, res) => {
         console.log("🚀 Sending notification to user:", userId);
         await notificationService.sendNotification(userId, { title, body, token, type, icon });
 
-        socketService.emitTestNotification({
-            userId,
-            data: {
-                title: title || "📢 Notification",
-                body: body || "New notification arrived",
-                messageId: `msg_${Date.now()}`,
-                timestamp: Date.now()
-            }
-        });
+        // Check if user has active socket connection before emitting
+        const userSockets = socketService.getUserSockets(userId);
+        if (userSockets && userSockets.length > 0) {
+            socketService.emitTestNotification({
+                userId,
+                data: {
+                    title: title || "📢 Notification",
+                    body: body || "New notification arrived",
+                    messageId: `msg_${Date.now()}`,
+                    timestamp: Date.now()
+                }
+            });
+        } else {
+            console.log("ℹ️ User has no active socket connection, skipping socket notification");
+        }
 
         res.status(200).json({ message: "Notification sent successfully" });
     } catch (err) {

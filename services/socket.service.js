@@ -369,5 +369,28 @@ export const socketService = {
     emitTestNotification,
     getIO,
     emitToUser,
-    emitToAll
+    emitToAll,
+    getUserSockets(userId) {
+        const userSockets = [];
+        for (const [socketId, socket] of Object.entries(connectedUsers)) {
+            if (socket.userId === userId) {
+                userSockets.push(socket);
+            }
+        }
+        return userSockets;
+    },
+    emitTestNotification(data) {
+        const { userId } = data;
+        const userSockets = this.getUserSockets(userId);
+        
+        if (!userSockets || userSockets.length === 0) {
+            logger.warn(`⚠️ No active sockets found for user ${userId}`);
+            return;
+        }
+
+        logger.info(`📡 Emitting test notification to ${userSockets.length} sockets for user ${userId}`);
+        userSockets.forEach(socket => {
+            socket.emit('test-notification', data);
+        });
+    }
 }
