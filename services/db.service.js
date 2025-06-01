@@ -7,7 +7,7 @@ export const dbService = { getCollection, closeConnection }
 var dbConn = null
 const MAX_RETRIES = 3
 const RETRY_DELAY = 2000 // 2 seconds
-const CONNECTION_TIMEOUT = 10000 // 10 seconds
+const CONNECTION_TIMEOUT = 60000 // 60 seconds
 
 async function getCollection(collectionName) {
 	let retries = 0
@@ -44,11 +44,11 @@ async function _connect() {
 	
 	try {
 		const client = await MongoClient.connect(config.dbURL, {
-			serverSelectionTimeoutMS: CONNECTION_TIMEOUT,
-			socketTimeoutMS: CONNECTION_TIMEOUT,
-			connectTimeoutMS: CONNECTION_TIMEOUT,
-			maxPoolSize: 10,
-			minPoolSize: 5,
+			serverSelectionTimeoutMS: 60000,
+			socketTimeoutMS: 60000,
+			connectTimeoutMS: 60000,
+			maxPoolSize: 100,
+			minPoolSize: 20,
 			maxIdleTimeMS: 30000,
 			retryWrites: true,
 			retryReads: true
