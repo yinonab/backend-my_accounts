@@ -58,22 +58,25 @@ webpush.setVapidDetails(
     config.notifications.vapidPublicKey,
     config.notifications.vapidPrivateKey
 );
-createIndexes();
-async function createIndexes() {
+async function ensureIndexes() {
     console.log('📦 Attempting to create notification indexes');
     try {
-        const collection = await dbService.getCollection(COLLECTION_NAME);
-        // console.log('🔍 Creating index on userId');
-        await collection.createIndex({ userId: 1 });
-        //  console.log('🔍 Creating index on userId and createdAt');
-        await collection.createIndex({ userId: 1, createdAt: -1 });
-        //    console.log('✅ Notification indexes created successfully');
-        //  logger.info('Notification indexes created');
+        const notificationsCollection = await dbService.getCollection('notifications');
+        await notificationsCollection.createIndex({ userId: 1 });
+        await notificationsCollection.createIndex({ userId: 1, createdAt: -1 });
+        console.log('🔍 Creating index on token for notifications collection');
+        await notificationsCollection.createIndex({ token: 1 }); // הוספת אינדקס על שדה הטוקן
+        
+        const tokensCollection = await dbService.getCollection('tokens');
+        console.log('🔍 Creating index on token for tokens collection');
+        await tokensCollection.createIndex({ token: 1 }, { unique: true }); // אינדקס יחידאי על שדה הטוקן
+        console.log('✅ Indexes created successfully for both collections');
     } catch (err) {
         logger.error('Failed to create indexes', err);
-        //  console.error('❌ Failed to create indexes:', err);
     }
 }
+
+ensureIndexes();
 
 // הוספת מערכת ניהול מחזור חיים של טוקנים
 class TokenLifecycleManager {
