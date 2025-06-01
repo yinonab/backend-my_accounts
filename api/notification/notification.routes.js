@@ -36,8 +36,9 @@ router.post('/', log, requireAuth, async (req, res) => {
         // console.log('👤 Extracted userId from token:', userId);
         // console.log('📩 Subscription Keys:', subscription ? Object.keys(subscription) : 'No subscription provided');
 
-
-        await notificationService.saveSubscription(token, userId);
+        // Ensure correct arguments order and structure for saveSubscription
+        const subscription = { token }; // Create a subscription object with the token
+        await notificationService.saveSubscription(userId, subscription);
         res.status(201).json({ message: "FCM Token saved successfully" });
     } catch (err) {
         console.error("❌ Error saving FCM Token:", err);
