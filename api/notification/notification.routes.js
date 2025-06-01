@@ -6,7 +6,7 @@ import { notificationService } from '../../services/notification.service.js';
 import { config } from '../../config/index.js';
 import { dbService } from '../../services/db.service.js';
 import { socketService } from '../../services/socket.service.js';
-import { NotificationToken } from '../../models/notificationToken.model.js';
+import { NotificationToken } from '../../models/notification-token.model.js';
 
 
 
