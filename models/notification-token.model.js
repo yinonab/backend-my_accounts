@@ -43,7 +43,8 @@ const notificationTokenSchema = new mongoose.Schema({
         }
     }
 }, {
-    timestamps: true
+    timestamps: true,
+    bufferCommands: false
 })
 
 export const NotificationToken = mongoose.model('NotificationToken', notificationTokenSchema) 
