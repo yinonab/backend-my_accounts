@@ -1498,5 +1498,5 @@ export const notificationService = {
     saveSubscription,
     sendNotification,
     removeSubscription,
-    createIndexes
+    ensureIndexes
 };
