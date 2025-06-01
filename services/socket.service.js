@@ -236,6 +236,39 @@ export function setupSocketAPI(http) {
             connectedUsers.delete(socket.user._id)
         })
 
+        // טיפול בהודעות צ'אט
+        socket.on('chat-send-msg', (msg) => {
+            logger.info(`💬 Received chat message: ${msg.text} from user ${socket.user._id}`)
+            // שידור ההודעה לכל הלקוחות המחוברים
+            io.emit('chat-add-msg', msg)
+        })
+
+        // טיפול בהודעות פרטיות
+        socket.on('chat-send-private-msg', ({ toUserId, text, imageUrl, videoUrl, sender, senderName, tempId }) => {
+            logger.info(`✉️ Received private message for ${toUserId} from ${socket.user._id}`)
+
+            const targetSocket = connectedUsers.get(toUserId)
+
+            if (targetSocket) {
+                // יצירת אובייקט הודעה מלא יותר
+                const privateMessage = {
+                    _id: tempId, // שימוש ב-tempId זמנית, יש להחליף ב-ID מהדאטהבייס אם נשמור הודעות
+                    sender: sender,
+                    senderName: senderName,
+                    text: text,
+                    imageUrl: imageUrl,
+                    videoUrl: videoUrl,
+                    toUserId: toUserId,
+                    createdAt: Date.now()
+                }
+                targetSocket.emit('chat-add-private-msg', privateMessage)
+                logger.info(`✅ Sent private message to user ${toUserId}`)
+            } else {
+                logger.warn(`⚠️ User ${toUserId} is not connected, cannot send private message via socket.`)
+                // כאן אפשר להוסיף לוגיקה לשמירת ההודעה במסד נתונים ושליחתה כשהמשתמש מתחבר
+            }
+        })
+
         // שאר ה-event handlers הקיימים
         socket.on('ping', () => {
             logger.info(`📡 Received ping from client [id: ${socket.id}]`)
