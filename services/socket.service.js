@@ -199,8 +199,14 @@ export function setupSocketAPI(http) {
     // טיפול בחיבורים חדשים
     io.on('connection', socket => {
         logger.info(`User connected: ${socket.user._id}`)
-        connectedUsers.set(socket.user._id, socket)
         
+        // Add socket to the set for the user
+        if (!connectedUsers.has(socket.user._id)) {
+            connectedUsers.set(socket.user._id, new Set())
+        }
+        connectedUsers.get(socket.user._id).add(socket)
+        logger.info(`Total sockets for user ${socket.user._id}: ${connectedUsers.get(socket.user._id).size}`)
+
         // הוספת החיבור למנהל החיבורים
         connectionManager.addConnection(socket.id, {
             userAgent: socket.handshake.headers['user-agent'],
@@ -224,7 +230,18 @@ export function setupSocketAPI(http) {
             try {
                 logger.info(`👋 Socket disconnected [id: ${socket.id}]. Reason: ${reason}`)
                 connectionManager.handleDisconnect(socket.id)
-                connectedUsers.delete(socket.user._id)
+                
+                // Remove socket from the set for the user
+                const userSockets = connectedUsers.get(socket.user._id)
+                if (userSockets) {
+                    userSockets.delete(socket)
+                    if (userSockets.size === 0) {
+                        connectedUsers.delete(socket.user._id)
+                        logger.info(`❌ No active sockets left for userId=${socket.user._id}, removing from map.`)
+                    } else {
+                        logger.info(`Remaining sockets for user ${socket.user._id}: ${userSockets.size}`)
+                    }
+                }
             } catch (error) {
                 logger.error(`❌ Error handling disconnection: ${error.message}`)
             }
@@ -247,9 +264,10 @@ export function setupSocketAPI(http) {
         socket.on('chat-send-private-msg', ({ toUserId, text, imageUrl, videoUrl, sender, senderName, tempId }) => {
             logger.info(`✉️ Received private message for ${toUserId} from ${socket.user._id}`)
 
-            const targetSocket = connectedUsers.get(toUserId)
+            // Get all sockets for the target user
+            const targetSockets = connectedUsers.get(toUserId)
 
-            if (targetSocket) {
+            if (targetSockets && targetSockets.size > 0) {
                 // יצירת אובייקט הודעה מלא יותר
                 const privateMessage = {
                     _id: tempId, // שימוש ב-tempId זמנית, יש להחליף ב-ID מהדאטהבייס אם נשמור הודעות
@@ -261,10 +279,20 @@ export function setupSocketAPI(http) {
                     toUserId: toUserId,
                     createdAt: Date.now()
                 }
-                targetSocket.emit('chat-add-private-msg', privateMessage)
-                logger.info(`✅ Sent private message to user ${toUserId}`)
+
+                // Emit to all sockets of the target user
+                targetSockets.forEach(targetSocket => {
+                    if (targetSocket.connected) {
+                        targetSocket.emit('chat-add-private-msg', privateMessage)
+                        logger.info(`✅ Sent private message to socket [id: ${targetSocket.id}] for user ${toUserId}`)
+                    } else {
+                         logger.warn(`⚠️ Target socket [id: ${targetSocket.id}] for user ${toUserId} is not connected, skipping.`)
+                         // Optional: Clean up disconnected sockets here if not handled elsewhere
+                    }
+                })
+
             } else {
-                logger.warn(`⚠️ User ${toUserId} is not connected, cannot send private message via socket.`)
+                logger.warn(`⚠️ User ${toUserId} has no active sockets, cannot send private message via socket.`)
                 // כאן אפשר להוסיף לוגיקה לשמירת ההודעה במסד נתונים ושליחתה כשהמשתמש מתחבר
             }
         })
