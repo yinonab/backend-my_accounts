@@ -124,7 +124,7 @@ export function setupSocketAPI(http) {
 
     io = new Server(http, {
         cors: {
-            origin: config.baseURL,
+            origin: '*',
             methods: ['GET', 'POST'],
             credentials: true,
             transports: ['websocket', 'polling']
@@ -256,8 +256,9 @@ export function setupSocketAPI(http) {
         // טיפול בהודעות צ'אט
         socket.on('chat-send-msg', (msg) => {
             logger.info(`💬 Received chat message: ${msg.text} from user ${socket.user._id}`)
-            // שידור ההודעה לכל הלקוחות המחוברים
-            io.emit('chat-add-msg', msg)
+            // שידור ההודעה לכל הלקוחות בחדר הרלוונטי
+            io.to(socket.myTopic || 'general').emit('chat-add-msg', msg)
+            logger.info(`✅ Broadcasted chat-add-msg to room: ${socket.myTopic || 'general'}`)
         })
 
         // טיפול בהודעות פרטיות
@@ -295,6 +296,54 @@ export function setupSocketAPI(http) {
                 logger.warn(`⚠️ User ${toUserId} has no active sockets, cannot send private message via socket.`)
                 // כאן אפשר להוסיף לוגיקה לשמירת ההודעה במסד נתונים ושליחתה כשהמשתמש מתחבר
             }
+        })
+
+        // טיפול באינדיקטור הקלדה
+        socket.on('typing', ({ toUserId, messageType }) => {
+            if (!socket.user?._id || !toUserId || !messageType) return;
+            logger.info(`✍️ User ${socket.user._id} is typing (${messageType}) for user ${toUserId}`);
+            const targetSockets = connectedUsers.get(toUserId);
+            if (targetSockets) {
+                targetSockets.forEach(targetSocket => {
+                     if (targetSocket.connected) {
+                         targetSocket.emit('user-typing', { fromUserId: socket.user._id, messageType });
+                     }
+                });
+            }
+        });
+
+        // טיפול באינדיקטור הפסקת הקלדה
+        socket.on('stop-typing', ({ toUserId }) => {
+            if (!socket.user?._id || !toUserId) return;
+            logger.info(`✋ User ${socket.user._id} stopped typing for user ${toUserId}`);
+             const targetSockets = connectedUsers.get(toUserId);
+            if (targetSockets) {
+                targetSockets.forEach(targetSocket => {
+                     if (targetSocket.connected) {
+                         targetSocket.emit('user-stop-typing', { fromUserId: socket.user._id });
+                     }
+                });
+            }
+        });
+
+        // טיפול בהצטרפות לחדר
+        socket.on('chat-set-topic', topic => {
+            if (!socket.user?._id) return;
+            if (socket.myTopic === topic) return
+            if (socket.myTopic) {
+                socket.leave(socket.myTopic)
+                logger.info(`Socket is leaving topic ${socket.myTopic} [id: ${socket.id}]`)
+            }
+            socket.join(topic)
+            socket.myTopic = topic
+            logger.info(`Socket joined topic ${topic} [id: ${socket.id}] for user ${socket.user._id}`)
+        })
+
+        // טיפול במעקב אחר משתמש
+        socket.on('user-watch', userId => {
+             if (!socket.user?._id || !userId) return;
+            logger.info(`👀 User ${socket.user._id} watching user ${userId} [socket id: ${socket.id}]`)
+            socket.join('watching:' + userId)
         })
 
         // שאר ה-event handlers הקיימים
@@ -427,22 +476,9 @@ function emitToAll(eventName, data) {
 // ייצוא הפונקציות הנדרשות
 export const socketService = {
     setupSocketAPI,
-    emitTestNotification,
-    getIO,
-    emitToUser,
-    emitToAll,
-    getUserSockets(userId) {
-        const userSockets = [];
-        for (const [socketId, socket] of Object.entries(connectedUsers)) {
-            if (socket.userId === userId) {
-                userSockets.push(socket);
-            }
-        }
-        return userSockets;
-    },
     emitTestNotification(data) {
         const { userId } = data;
-        const userSockets = this.getUserSockets(userId);
+        const userSockets = _getUserSockets(userId);
         
         if (!userSockets || userSockets.length === 0) {
             logger.warn(`⚠️ No active sockets found for user ${userId}`);
@@ -453,5 +489,38 @@ export const socketService = {
         userSockets.forEach(socket => {
             socket.emit('test-notification', data);
         });
+    },
+    getIO,
+    emitToUser,
+    emitToAll,
+    getUserSockets(userId) {
+        const socketSet = connectedUsers.get(userId);
+        if (!socketSet) {
+            return [];
+        }
+        return Array.from(socketSet).filter(socket => socket.connected);
+    },
+    cleanupDeadSocket(socketId, userId) {
+        const userSockets = connectedUsers.get(userId);
+        if (!userSockets) return;
+
+        let targetSocket = null;
+        for (const socket of userSockets) {
+            if (socket.id === socketId) {
+                targetSocket = socket;
+                break;
+            }
+        }
+
+        if (targetSocket) {
+             userSockets.delete(targetSocket);
+             logger.info(`🧹 Manually removed dead socket [id: ${socketId}] for userId=${userId}`);
+             if (userSockets.size === 0) {
+                connectedUsers.delete(userId);
+                logger.info(`❌ No active sockets left for userId=${userId}, removing from map.`);
+            }
+        } else {
+             logger.warn(`⚠️ Attempted to manually remove socket [id: ${socketId}] for userId=${userId} but socket not found in map set.`);
+        }
     }
 }
