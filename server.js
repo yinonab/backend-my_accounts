@@ -123,42 +123,6 @@ app.use(cookieParser());
 app.use(express.json());
 
 // CORS Setup
-// if (isProduction) {
-//     app.use(cors({
-//         origin: process.env.FRONTEND_URL || 'https://backend-my-accounts.onrender.com', // Update with your production frontend URL
-//         credentials: true, // Allow cookies to be sent
-//     }));
-//     console.log(`CORS configured for production: ${process.env.FRONTEND_URL}`);
-// } else {
-//     app.use(cors({
-//         origin: [
-//             'http://127.0.0.1:3000',
-//             'http://localhost:3000',
-//             'http://127.0.0.1:5173',
-//             'http://localhost:5173',
-//             'http://localhost:4200',
-//         ],
-//         credentials: true, // Allow cookies to be sent
-//     }));
-//     console.log('CORS configured for development');
-// }
-
-// // Static file serving for production
-// if (isProduction) {
-//     // Serve static files from the "public" directory
-//     app.use(express.static(path.resolve('public')));
-
-//     // Fallback route for unmatched requests
-//     app.use((req, res, next) => {
-//         if (req.path.startsWith('/api') || req.path.includes('.')) {
-//             // Skip fallback for API and static asset requests
-//             return next();
-//         }
-//         // Serve the Angular app for other routes
-//         res.sendFile(path.resolve('public', 'index.html'));
-//     });
-// }
-// CORS Setup
 if (isProduction) {
     app.use(cors({
         origin: [
@@ -173,21 +137,10 @@ if (isProduction) {
     console.log(`CORS configured for production: ${process.env.FRONTEND_URL}`);
 } else {
     app.use(cors({
-        origin: [
-            'http://127.0.0.1:3000',
-            'http://localhost:3000',
-            'http://127.0.0.1:5173',
-            'http://localhost:5173',
-            'http://localhost:4200',
-            'http://localhost:3030',
-            'http://192.168.1.63:4200',  // הוספת כתובת ה-IP של המחשב שלך
-            'http://10.0.2.2:4200',      // סימולטור אנדרואיד
-            'http://10.100.102.9:4200',
-            'http://192.168.1.88:4200'  // IP חדש שלך
-        ],
-        credentials: true,
+        origin: '*',
         methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-        allowedHeaders: ['Content-Type', 'Authorization']
+        allowedHeaders: ['Content-Type', 'Authorization', 'loginToken'],
+        credentials: true
     }));
     console.log('CORS configured for development');
 }
@@ -207,7 +160,6 @@ if (isProduction) {
     });
 }
 
-
 // Middleware for async local storage
 app.all('*', setupAsyncLocalStorage);
 
@@ -218,8 +170,6 @@ app.use('/api/review', reviewRoutes);
 app.use('/api/contact', contactRoutes);
 app.use('/api/notification', notificationRoutes);
 app.use("/api/geolocation", geolocationRoutes);
-
-
 
 // Debugging request logs
 app.use((req, res, next) => {
@@ -244,7 +194,6 @@ if (!isProduction) {
         res.sendFile(path.resolve('public', 'index.html'));
     });
 }
-
 
 // Start the server
 // server.listen(port, () => {

@@ -127,7 +127,7 @@ export function setupSocketAPI(http) {
             origin: '*',
             methods: ['GET', 'POST'],
             credentials: true,
-            transports: ['websocket', 'polling']
+            allowedHeaders: ['Content-Type', 'Authorization', 'loginToken']
         },
         allowEIO3: true,
         pingInterval: HEARTBEAT_INTERVAL,
