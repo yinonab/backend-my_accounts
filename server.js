@@ -4,7 +4,9 @@ import cors from 'cors';
 import express from 'express';
 import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
-import { config } from './config/index.js'; // ודא שהנתיב נכון!
+import config from './config/dev.js'; // שינוי הייבוא
+import admin from 'firebase-admin';
+import mongoose from 'mongoose';
 
 dotenv.config();
 
@@ -25,6 +27,86 @@ import { setupAsyncLocalStorage } from './middlewares/setupAls.middleware.js';
 import { logger } from './services/logger.service.js';
 import { upload } from './services/cloudinary.service.js';
 
+// Initialize Firebase Admin if not already initialized
+if (!admin.apps.length) {
+    const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+    admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount),
+    });
+}
+
+// הגדרת ערוצי התראות
+const configureNotificationChannels = async () => {
+    try {
+        // הגדרת ערוצי התראות עבור אנדרואיד
+        const androidConfig = {
+            notification: {
+                android: {
+                    notification: {
+                        channelId: 'high_importance_channel',
+                        priority: 'high',
+                        defaultSound: true,
+                        defaultVibrateTimings: true,
+                        defaultLightSettings: true
+                    }
+                }
+            }
+        };
+
+        // הגדרת ערוצי התראות עבור iOS
+        const apnsConfig = {
+            payload: {
+                aps: {
+                    sound: 'default',
+                    badge: 1,
+                    contentAvailable: true
+                }
+            },
+            headers: {
+                'apns-priority': '10'
+            }
+        };
+
+        // הגדרת ערוצי התראות עבור Web
+        const webConfig = {
+            notification: {
+                requireInteraction: true,
+                vibrate: [100, 50, 100]
+            },
+            headers: {
+                Urgency: 'high'
+            }
+        };
+
+        // שמירת ההגדרות בקובץ הקונפיגורציה
+        const notificationConfig = {
+            android: androidConfig,
+            apns: apnsConfig,
+            web: webConfig
+        };
+
+        console.log('✅ Notification channels configured successfully');
+        return notificationConfig;
+    } catch (error) {
+        console.error('❌ Failed to configure notification channels:', error);
+        // החזרת הגדרות ברירת מחדל במקרה של שגיאה
+        return {
+            android: {
+                notification: {
+                    android: {
+                        notification: {
+                            channelId: 'default_channel',
+                            priority: 'default'
+                        }
+                    }
+                }
+            }
+        };
+    }
+};
+
+// Call the configuration function
+const notificationConfig = configureNotificationChannels();
 
 const app = express();
 const server = http.createServer(app);
@@ -185,10 +267,34 @@ app.post('/api/upload', upload.single('image'), (req, res) => {
         res.status(500).json({ error: 'Image upload failed', details: error.message });
     }
 });
-// Start the server
-server.listen(port, '0.0.0.0', () => {
-    console.log(`🚀 Server is running on port: ${port}`);
-});
+
+async function startServer() {
+    try {
+        // Connect to MongoDB using Mongoose
+        await mongoose.connect(config.dbURL, {
+            serverSelectionTimeoutMS: 60000,
+            socketTimeoutMS: 60000,
+            connectTimeoutMS: 60000,
+            maxPoolSize: 100,
+            minPoolSize: 20,
+            maxIdleTimeMS: 30000,
+            retryWrites: true,
+            retryReads: true
+        });
+        logger.info('✅ MongoDB connection established successfully');
+
+        // Start the server AFTER successful database connection
+        server.listen(port, () => {
+            logger.info(`Server is running on port: ${port}`);
+        });
+    } catch (err) {
+        logger.error('❌ Failed to connect to MongoDB or start server:', err);
+        process.exit(1); // Exit with failure code
+    }
+}
+
+// Call the async function to start the server
+startServer();
 
 
 

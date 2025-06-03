@@ -1,529 +1,457 @@
 import { logger } from './logger.service.js'
 import { Server } from 'socket.io'
+import jwt from 'jsonwebtoken'
+import config from '../config/dev.js'
+import { userService } from '../api/user/user.service.js'
 
-var gIo = null
-const userSocketsMap = new Map(); // 🗺️ New Map to track userId -> socketId
+let io = null
+let connectedUsers = new Map()
 
+// הגדרת קבועים
+const HEARTBEAT_INTERVAL = 10000 // 10 שניות
+const KEEP_ALIVE_INTERVAL = 240000 // 4 דקות
+const CONNECTION_CHECK_INTERVAL = 30000 // 30 שניות
+const MAX_RECONNECT_ATTEMPTS = 5
+const RECONNECT_DELAY = 5000 // 5 שניות
 
-/**
- * 🧠 Socket Service Architecture
- *
- * ✅ Supports multiple sockets per user (e.g., mobile, browser, tablet).
- * ✅ Manages socket authentication and tracks all active sockets in `userSocketsMap`.
- * ✅ On disconnection: removes the socket and cleans dead sockets; if none remain, removes user from map.
- * ✅ Emits and broadcasts messages to all relevant sockets for each user.
- * ✅ Ensures system remains robust, consistent, and scalable with real-time updates across platforms.
- *
- * Author: [Your Name]
- * Date: [Today's Date]
- */
-/**
- * 🧠 שירות Socket - תמיכה במשתמשים עם מספר חיבורים
- *
- * ✅ מאפשר ריבוי חיבורים (סוקטים) לכל משתמש (דפדפן, מובייל, טאבלט וכו').
- * ✅ מנוהל מיפוי של כל הסוקטים הפעילים במבנה userSocketsMap.
- * ✅ בעת ניתוק: הסוקט מוסר מהמיפוי, ואם אין סוקטים פעילים - היוזר נמחק מהמפה.
- * ✅ שליחה ושידור הודעות לכל הסוקטים הפעילים של כל משתמש.
- * ✅ שומר על יציבות, גמישות וסקיילביליות במערכת עדכונים בזמן אמת.
- *
- * מחבר: [שמך]
- * תאריך: [תאריך היום]
- */
+// מחלקת ניהול חיבורים
+class ConnectionManager {
+    constructor() {
+        this.connections = new Map()
+        this.reconnectAttempts = new Map()
+        this.lastPingTime = new Map()
+        this.connectionTimeouts = new Map()
+    }
 
+    getConnectionStats() {
+        return {
+            total: this.connections.size,
+            active: Array.from(this.connections.values()).filter(conn => conn.isActive).length,
+            reconnecting: Array.from(this.reconnectAttempts.values()).filter(attempts => attempts > 0).length
+        }
+    }
 
+    addConnection(socketId, details) {
+        this.connections.set(socketId, {
+            ...details,
+            isActive: true,
+            lastHeartbeat: Date.now(),
+            connectedAt: Date.now()
+        })
+        
+        // הגדרת timeout לניקוי אוטומטי
+        const timeout = setTimeout(() => {
+            this.handleDeadConnection(socketId)
+        }, CONNECTION_CHECK_INTERVAL * 2)
+        
+        this.connectionTimeouts.set(socketId, timeout)
+    }
+
+    removeConnection(socketId) {
+        const timeout = this.connectionTimeouts.get(socketId)
+        if (timeout) {
+            clearTimeout(timeout)
+            this.connectionTimeouts.delete(socketId)
+        }
+        
+        this.connections.delete(socketId)
+        this.reconnectAttempts.delete(socketId)
+        this.lastPingTime.delete(socketId)
+    }
+
+    updateHeartbeat(socketId) {
+        const connection = this.connections.get(socketId)
+        if (connection) {
+            connection.lastHeartbeat = Date.now()
+            connection.isActive = true
+            
+            // איפוס ניסיונות החיבור מחדש
+            this.reconnectAttempts.set(socketId, 0)
+            
+            // עדכון ה-timeout
+            const timeout = this.connectionTimeouts.get(socketId)
+            if (timeout) {
+                clearTimeout(timeout)
+            }
+            
+            const newTimeout = setTimeout(() => {
+                this.handleDeadConnection(socketId)
+            }, CONNECTION_CHECK_INTERVAL * 2)
+            
+            this.connectionTimeouts.set(socketId, newTimeout)
+        }
+    }
+
+    handleDisconnect(socketId) {
+        const attempts = (this.reconnectAttempts.get(socketId) || 0) + 1
+        this.reconnectAttempts.set(socketId, attempts)
+        
+        if (attempts >= MAX_RECONNECT_ATTEMPTS) {
+            this.removeConnection(socketId)
+            logger.info(`❌ Max reconnection attempts reached for socket [id: ${socketId}]`)
+        } else {
+            logger.info(`⚠️ Socket disconnected [id: ${socketId}]. Attempt ${attempts}/${MAX_RECONNECT_ATTEMPTS}`)
+        }
+    }
+
+    handleDeadConnection(socketId) {
+        const connection = this.connections.get(socketId)
+        if (connection && Date.now() - connection.lastHeartbeat > CONNECTION_CHECK_INTERVAL * 2) {
+            logger.warn(`💀 Dead connection detected [id: ${socketId}]`)
+            this.removeConnection(socketId)
+            
+            // ניסיון לשלוח התראה למשתמש
+            const userId = connection.userId
+            if (userId) {
+                emitTestNotification({
+                    userId,
+                    data: {
+                        title: "⚠️ Connection Lost",
+                        body: "Your connection was lost. Please check your internet connection."
+                    }
+                })
+            }
+        }
+    }
+}
+
+// פונקציית התחלת השרת
 export function setupSocketAPI(http) {
-    gIo = new Server(http, {
+    if (io) {
+        logger.info('Socket API already initialized')
+        return
+    }
+
+    io = new Server(http, {
         cors: {
-            origin: '*',
+            origin: config.baseURL,
             methods: ['GET', 'POST'],
             credentials: true,
             transports: ['websocket', 'polling']
         },
         allowEIO3: true,
-        pingInterval: 25000,
-        pingTimeout: 600000
-    });
-    setInterval(cleanupAllDeadSockets, 60 * 1000);
+        pingInterval: HEARTBEAT_INTERVAL,
+        pingTimeout: CONNECTION_CHECK_INTERVAL,
+        connectTimeout: 45000
+    })
 
-    gIo.on('connection', socket => {
-        logger.info(`New connected socket [id: ${socket.id}]`)
-        logger.info(`✅ New connected socket [id: ${socket.id}]`)
-        logger.info(`🖥️ Connection details`, {
+    const connectionManager = new ConnectionManager()
+
+    io.use(async (socket, next) => {
+        try {
+            const token = socket.handshake.auth.token
+            if (!token) {
+                return next(new Error('Authentication error'))
+            }
+
+            const decoded = jwt.verify(token, process.env.JWT_SECRET)
+            const user = await userService.getById(decoded._id)
+            
+            if (!user) {
+                return next(new Error('User not found'))
+            }
+
+            socket.user = user
+            next()
+        } catch (err) {
+            logger.error('Socket authentication error:', err)
+            next(new Error('Authentication error'))
+        }
+    })
+
+    // הגדרת ניקוי תקופתי
+    setInterval(() => {
+        try {
+            const now = Date.now()
+            const deadTimeout = CONNECTION_CHECK_INTERVAL
+
+            for (const [socketId, connection] of connectionManager.connections.entries()) {
+                if (now - connection.lastHeartbeat > deadTimeout) {
+                    connectionManager.removeConnection(socketId)
+                    logger.info(`🧹 Removed dead socket [id: ${socketId}]`)
+                }
+            }
+
+            const stats = connectionManager.getConnectionStats()
+            logger.info(`🧹 Running global cleanup for dead sockets...`)
+            logger.info(`✅ Cleanup complete. Active users: ${stats.active}`)
+        } catch (error) {
+            logger.error(`❌ Error during socket cleanup: ${error.message}`)
+        }
+    }, CONNECTION_CHECK_INTERVAL)
+
+    // הגדרת שליחת keep-alive
+    setInterval(() => {
+        try {
+            for (const [socketId, connection] of connectionManager.connections.entries()) {
+                if (connection.isActive) {
+                    const socket = io.sockets.sockets.get(socketId)
+                    if (socket) {
+                        socket.emit('keep-alive')
+                    }
+                }
+            }
+        } catch (error) {
+            logger.error(`❌ Error sending keep-alive: ${error.message}`)
+        }
+    }, KEEP_ALIVE_INTERVAL)
+
+    // טיפול בחיבורים חדשים
+    io.on('connection', socket => {
+        logger.info(`User connected: ${socket.user._id}`)
+        
+        // Add socket to the set for the user
+        if (!connectedUsers.has(socket.user._id)) {
+            connectedUsers.set(socket.user._id, new Set())
+        }
+        connectedUsers.get(socket.user._id).add(socket)
+        logger.info(`Total sockets for user ${socket.user._id}: ${connectedUsers.get(socket.user._id).size}`)
+
+        // הוספת החיבור למנהל החיבורים
+        connectionManager.addConnection(socket.id, {
             userAgent: socket.handshake.headers['user-agent'],
             transport: socket.conn.transport.name,
-            ip: socket.handshake.address
-        });
-    
+            ip: socket.handshake.address,
+            userId: socket.user._id
+        })
+
+        // הגדרת event handlers
+        socket.on('heartbeat', () => {
+            try {
+                connectionManager.updateHeartbeat(socket.id)
+                socket.emit('heartbeat_ack')
+                logger.info(`❤️‍🔥 Heartbeat received from [id: ${socket.id}]`)
+            } catch (error) {
+                logger.error(`❌ Error processing heartbeat: ${error.message}`)
+            }
+        })
+
+        socket.on('disconnect', (reason) => {
+            try {
+                logger.info(`👋 Socket disconnected [id: ${socket.id}]. Reason: ${reason}`)
+                connectionManager.handleDisconnect(socket.id)
+                
+                // Remove socket from the set for the user
+                const userSockets = connectedUsers.get(socket.user._id)
+                if (userSockets) {
+                    userSockets.delete(socket)
+                    if (userSockets.size === 0) {
+                        connectedUsers.delete(socket.user._id)
+                        logger.info(`❌ No active sockets left for userId=${socket.user._id}, removing from map.`)
+                    } else {
+                        logger.info(`Remaining sockets for user ${socket.user._id}: ${userSockets.size}`)
+                    }
+                }
+            } catch (error) {
+                logger.error(`❌ Error handling disconnection: ${error.message}`)
+            }
+        })
+
+        socket.on('error', (error) => {
+            logger.error(`❌ Socket error [id: ${socket.id}]: ${error.message}`)
+            connectionManager.handleDisconnect(socket.id)
+            connectedUsers.delete(socket.user._id)
+        })
+
+        // טיפול בהודעות צ'אט
+        socket.on('chat-send-msg', (msg) => {
+            logger.info(`💬 Received chat message: ${msg.text} from user ${socket.user._id}`)
+            // שידור ההודעה לכל הלקוחות המחוברים
+            io.emit('chat-add-msg', msg)
+        })
+
+        // טיפול בהודעות פרטיות
+        socket.on('chat-send-private-msg', ({ toUserId, text, imageUrl, videoUrl, sender, senderName, tempId }) => {
+            logger.info(`✉️ Received private message for ${toUserId} from ${socket.user._id}`)
+
+            // Get all sockets for the target user
+            const targetSockets = connectedUsers.get(toUserId)
+
+            if (targetSockets && targetSockets.size > 0) {
+                // יצירת אובייקט הודעה מלא יותר
+                const privateMessage = {
+                    _id: tempId, // שימוש ב-tempId זמנית, יש להחליף ב-ID מהדאטהבייס אם נשמור הודעות
+                    sender: sender,
+                    senderName: senderName,
+                    text: text,
+                    imageUrl: imageUrl,
+                    videoUrl: videoUrl,
+                    toUserId: toUserId,
+                    createdAt: Date.now()
+                }
+
+                // Emit to all sockets of the target user
+                targetSockets.forEach(targetSocket => {
+                    if (targetSocket.connected) {
+                        targetSocket.emit('chat-add-private-msg', privateMessage)
+                        logger.info(`✅ Sent private message to socket [id: ${targetSocket.id}] for user ${toUserId}`)
+                    } else {
+                         logger.warn(`⚠️ Target socket [id: ${targetSocket.id}] for user ${toUserId} is not connected, skipping.`)
+                         // Optional: Clean up disconnected sockets here if not handled elsewhere
+                    }
+                })
+
+            } else {
+                logger.warn(`⚠️ User ${toUserId} has no active sockets, cannot send private message via socket.`)
+                // כאן אפשר להוסיף לוגיקה לשמירת ההודעה במסד נתונים ושליחתה כשהמשתמש מתחבר
+            }
+        })
+
+        // שאר ה-event handlers הקיימים
         socket.on('ping', () => {
-            logger.info(`📡 Received ping from client [id: ${socket.id}]`);
-            socket.emit('pong'); // מחזיר pong כדי לשמור על החיבור
-        });
+            logger.info(`📡 Received ping from client [id: ${socket.id}]`)
+            socket.emit('pong')
+        })
+
+        socket.on('pong', () => {
+            logger.info(`🏓 Pong received from client [id: ${socket.id}]`)
+        })
 
         socket.on('user-ready', () => {
-            logger.info(`User ready [userId=${socket.userId}, socketId=${socket.id}]`);
-            if (!socket.userId) return;
+            logger.info(`User ready [userId=${socket.user._id}, socketId=${socket.id}]`)
+            if (!socket.user._id) return
             emitTestNotification({
-                userId: socket.userId,
+                userId: socket.user._id,
                 data: {
                     title: "📢 Welcome!",
                     body: "Ready for notifications! 🚀"
                 }
-            });
-        });
-        
-
-
-        socket.on('pong', () => {
-            logger.info(`🏓 Pong received from client [id: ${socket.id}]`);
-        });
-
-        socket.conn.on('heartbeat', () => {
-            logger.info(`❤️‍🔥 Heartbeat received from [id: ${socket.id}]`);
-        });
-        
-        
-        socket.on('disconnect', (reason) => {
-            logger.warn(`Socket disconnected [id: ${socket.id}], reason: ${reason}`);
-            if (socket.userId) {
-                const socketSet = userSocketsMap.get(socket.userId);
-                if (socketSet) {
-                    socketSet.delete(socket.id); // 🧠 שינוי: מחיקה מתוך Set
-                    if (socketSet.size > 0) {
-                        userSocketsMap.set(socket.userId, socketSet);
-                    } else {
-                        userSocketsMap.delete(socket.userId);
-                        logger.info(`🧹 All sockets closed for user ${socket.userId}, removed from map.`);
-                    }
-                }
-            }
-        });
-        
-        socket.on('connect', () => {
-            logger.info(`🔄 Socket connected again [id: ${socket.id}]`);
-
-        });
-        socket.on('typing', (data) => {
-            const { toUserId, messageType } = data;
-            if (!socket.userId || !toUserId || !messageType) return;
-        
-            const targetSockets = _getUserSockets(toUserId);
-            targetSockets.forEach(targetSocket => {
-                targetSocket.emit('user-typing', {
-                    fromUserId: socket.userId,
-                    messageType
-                });
-            });
-        });
-        
-
-        socket.on('stop-typing', (data) => {
-            const { toUserId } = data;
-            if (!socket.userId || !toUserId) return;
-        
-            const targetSockets = _getUserSockets(toUserId);
-            targetSockets.forEach(targetSocket => {
-                targetSocket.emit('user-stop-typing', { fromUserId: socket.userId });
-            });
-        });
-        
-
-        socket.on('chat-set-topic', topic => {
-            if (socket.myTopic === topic) return
-            if (socket.myTopic) {
-                socket.leave(socket.myTopic)
-                logger.info(`Socket is leaving topic ${socket.myTopic} [id: ${socket.id}]`)
-            }
-            socket.join(topic)
-            socket.myTopic = topic
-        })
-        socket.on('chat-send-msg', msg => {
-            if (!socket.userId) {
-                logger.warn(`⚠️ Unauthorized message attempt from socket [id: ${socket.id}] - User not logged in.`);
-                return;
-            }
-
-            // יצירת אובייקט הודעה
-            const message = {
-                sender: socket.userId,
-                senderName: socket.username || 'Unknown User', // אם אין שם משתמש
-                text: msg.text || '', // אם אין טקסט, נשלח מחרוזת ריקה
-                imageUrl: msg.imageUrl || undefined, // אם אין תמונה, נשאיר `undefined`
-                videoUrl: msg.videoUrl || undefined,
-            };
-
-            logger.info(`📢 קיבלנו הודעה חדשה מהמשתמש: 
-                🆔 UserID: ${socket.userId}
-                🏷️ Room: ${socket.myTopic || 'No Room'}
-                📝 Text: "${msg.text || 'No text'}"
-                🖼️ Image: ${msg.imageUrl ? msg.imageUrl : 'No Image'}
-                🎥 Video: ${msg.videoUrl ? msg.videoUrl : 'No Video'}`);
-
-
-            gIo.to(socket.myTopic).emit('chat-add-msg', message);
-        });
-
-        // ✅ האזנה להודעות פרטיות
-        socket.on('chat-send-private-msg', async (data) => {
-            logger.info(`📩 chat-send-private-msg received:`, data);
-            const { toUserId, text, imageUrl, videoUrl, tempId } = data;
-
-            if (!socket.userId || !socket.username) {
-                logger.warn(`❌ Unauthorized private message attempt from socket [id: ${socket.id}] - Missing user authentication.`);
-                return;
-            }
-
-            if (!toUserId || (text === undefined && imageUrl === undefined && videoUrl === undefined)) {
-                logger.warn(`⚠️ Missing recipient or message content`);
-                return;
-            }
-
-            const privateMessage = {
-                sender: socket.userId,
-                senderName: socket.username,
-                text: text || '',
-                imageUrl: imageUrl || undefined,
-                videoUrl: videoUrl || undefined,
-                toUserId: toUserId,
-                tempId: tempId
-            };
-
-            const targetSockets = _getUserSockets(toUserId);
-            
-            // שליחת ההודעה לכל הסוקטים של המשתמש
-            if (targetSockets.length) {
-                targetSockets.forEach(targetSocket => {
-                    targetSocket.emit('chat-add-private-msg', privateMessage);
-                });
-                
-                // שליחת נוטיפיקציה רק פעם אחת, לא משנה כמה סוקטים יש
-                try {
-                    await notificationService.sendNotification(toUserId, {
-                        title: `📩 הודעה חדשה מ- ${socket.username}`,
-                        body: text || 'תמונה חדשה',
-                        type: 'chat-message',
-                        data: {
-                            messageType: 'private',
-                            senderId: socket.userId,
-                            senderName: socket.username
-                        }
-                    });
-                } catch (err) {
-                    logger.error('Failed to send notification:', err);
-                    // המשך בזרימת הקוד גם אם הנוטיפיקציה נכשלה
-                }
-
-                logger.info(`✅ Private message delivered to ${toUserId} on ${targetSockets.length} socket(s)`);
-            } else {
-                logger.warn(`⚠️ No active sockets found for recipient ${toUserId}`);
-            }
-        });
-
-
-
-
-
-
-        socket.on('user-watch', userId => {
-            logger.info(`user-watch from socket [id: ${socket.id}], on user ${userId}`)
-            socket.join('watching:' + userId)
-        })
-   
-
-       // 🆕 שינוי: עכשיו תומך בריבוי סוקטים לכל יוזר
-       socket.on('set-user-socket', (userData) => {
-        const { userId, username } = userData;
-        if (!userId) return;
-        socket.userId = userId;
-        socket.username = username;
-
-        if (!userSocketsMap.has(userId)) {
-            userSocketsMap.set(userId, new Set());
-        }
-        const socketSet = userSocketsMap.get(userId);
-        if (!socketSet.has(socket.id)) {
-            socketSet.add(socket.id);
-            logger.info(`✅ Added socket ${socket.id} to user ${userId}`);
-        } else {
-            logger.info(`ℹ️ Socket ${socket.id} already mapped for user ${userId}, skipping.`);
-        }
-    });
-    
-
-        
-
-
-        // האזנה לאירוע Keep Alive מהלקוח
-        socket.on('ping', () => {
-            logger.info(`📡 Received ping from client [id: ${socket.id}]`);
-            socket.emit('pong'); // החזרת pong כדי לשמור על החיבור
-        });
-
-        // זיהוי חיבורי Socket שהתנתקו
-        socket.conn.on('heartbeat', () => {
-            logger.info(`❤️‍🔥 Heartbeat received from [id: ${socket.id}]`);
-        });
-
-        socket.on('unset-user-socket', () => {
-            logger.info(`Removing socket.userId for socket [id: ${socket.id}]`)
-            delete socket.userId
+            })
         })
 
+        socket.on('reconnect_attempt', (attemptNumber) => {
+            logger.info(`Reconnection attempt ${attemptNumber} for user ${socket.user._id}`)
+        })
+
+        socket.on('reconnect', (attemptNumber) => {
+            logger.info(`Reconnected after ${attemptNumber} attempts for user ${socket.user._id}`)
+        })
+
+        socket.on('reconnect_error', (error) => {
+            logger.error(`Reconnection error for user ${socket.user._id}:`, error)
+        })
+
+        socket.on('reconnect_failed', () => {
+            logger.error(`Failed to reconnect for user ${socket.user._id}`)
+        })
     })
-}
-function cleanupDuplicateSocketRefs(userId) {
-    const socketSet = userSocketsMap.get(userId) || new Set();
-    const aliveSocketIds = new Set();
-    for (const socketId of socketSet) {
-        const socket = gIo.sockets.sockets.get(socketId);
-        if (socket && socket.connected) {
-            aliveSocketIds.add(socketId);
-        }
-    }
-    if (aliveSocketIds.size > 0) {
-        userSocketsMap.set(userId, aliveSocketIds);
-    } else {
-        userSocketsMap.delete(userId);
-    }
-    logger.info(`🧼 Cleaned socket refs for userId=${userId}, remaining: [${Array.from(aliveSocketIds).join(', ')}]`);
+
+    return io
 }
 
-
-function emitTo({ type, data, label }) {
-    if (label) gIo.to('watching:' + label.toString()).emit(type, data)
-    else gIo.emit(type, data)
+// פונקציות עזר
+function _getUserSockets(userId) {
+    const socketSet = connectedUsers.get(userId) || new Set()
+    return Array.from(socketSet)
+        .map(socketId => io.sockets.sockets.get(socketId))
+        .filter(socket => socket && socket.connected)
 }
 
-async function emitToUser({ type, data, userId }) {
-    const socketSet = userSocketsMap.get(userId) || new Set();
-    for (const socketId of socketSet) {
-        const socket = gIo.sockets.sockets.get(socketId);
-        if (socket && socket.connected) {
-            socket.emit(type, data);
-            logger.info(`✅ Emitted ${type} to socket ${socket.id}`);
-        }
-    }
-}
 async function emitTestNotification({ userId, data, attempt = 1 }) {
-    // אם לא הועבר userId, נרשום שגיאה
     if (!userId) {
-        logger.error(`❌ emitTestNotification called without userId!`);
-        return;
+        logger.error(`❌ emitTestNotification called without userId!`)
+        return
     }
-    
-    // לוקחים את כל הסוקטים של המשתמש מתוך המפה, אם אין, ניצור מערך ריק
-    const socketSet = userSocketsMap.get(userId) || new Set();
-    const socketIds = Array.from(socketSet); // ממירים את ה-Set למערך כדי לעבוד איתו
 
-    // רושמים את הניסיון הנוכחי של השיגור
-    logger.info(`🔍 emitTestNotification: Attempt ${attempt} for userId=${userId}`);
-    logger.info(`🗺️ Current sockets for userId=${userId}: [${socketIds.join(', ')}]`);
+    const socketSet = connectedUsers.get(userId) || new Set()
+    const socketIds = Array.from(socketSet)
 
-    // אם אין סוקטים שנמצאים במפה עבור המשתמש, ננסה שוב עד 5 פעמים
+    logger.info(`🔍 emitTestNotification: Attempt ${attempt} for userId=${userId}`)
+    logger.info(`🗺️ Current sockets for userId=${userId}: [${socketIds.join(', ')}]`)
+
     if (!socketIds.length) {
         if (attempt <= 5) {
-            logger.warn(`⚠️ No sockets for userId=${userId}. Retrying attempt ${attempt}`);
-            // אם אין סוקטים, נמתין ונסו שוב
-            setTimeout(() => emitTestNotification({ userId, data, attempt: attempt + 1 }), attempt * 500);
+            logger.warn(`⚠️ No sockets for userId=${userId}. Retrying attempt ${attempt}`)
+            setTimeout(() => emitTestNotification({ userId, data, attempt: attempt + 1 }), attempt * 500)
         } else {
-            // אם הגענו למקסימום של 5 ניסיונות, נרשום שגיאה
-            logger.error(`❌ Max retries reached for userId=${userId}. Giving up.`);
+            logger.error(`❌ Max retries reached for userId=${userId}. Giving up.`)
         }
-        return; // אם לא הצלחנו למצוא סוקטים, יוצאים מהפונקציה
+        return
     }
 
-    // עבור כל סוקט במערך, ננסה לשלוח את ההודעה
     for (const socketId of socketIds) {
-        const socket = gIo.sockets.sockets.get(socketId); // מוצאים את הסוקט מתוך המפה
-
-        if (socket && socket.connected) { // אם הסוקט מחובר
-            // שולחים את ההודעה לסוקט הזה
-            socket.emit('test-notification', data);
-            logger.info(`✅ Sent test-notification to socketId=${socket.id}`);
-        } else {
-            // אם הסוקט לא נמצא או לא מחובר, נרשום שהסוקט מנותק
-            logger.warn(`⚠️ Skipped socketId=${socketId} (not found or disconnected)`);
-            // אם הסוקט לא נמצא או מנותק, ננקה אותו מהמפה
-            cleanupDeadSocket(socketId, userId);
-        }
-    }
-}
-
-// פונקציה לניקוי סוקט מנותק מהמפה
-function cleanupDeadSocket(socketId, userId) {
-    const socketSet = userSocketsMap.get(userId); // מוצאים את כל הסוקטים של המשתמש
-
-    if (!socketSet) return; // אם אין סוקטים, יוצאים
-
-    const socket = gIo.sockets.sockets.get(socketId);
-    const socketName = socket ? socket.handshake ? socket.handshake.headers['user-agent'] : 'Unknown Socket' : 'Socket Not Found';
-
-
-    // מוחקים את הסוקט מהמפה
-    socketSet.delete(socketId);
-    logger.info(`🧹 Removed dead socket [id: ${socketId}, Name: ${socketName}] for userId=${userId}`);
-
-    // אם לא נשארו סוקטים פעילים עבור המשתמש, נמחק את המשתמש מהמפה
-    if (socketSet.size === 0) {
-        userSocketsMap.delete(userId);
-        logger.info(`❌ No active sockets left for userId=${userId}, removing from map.`);
-    }
-}
-
-
-function cleanupAllDeadSockets() {
-    logger.info("🧹 Running global cleanup for dead sockets...");
-
-    for (const [userId, socketSet] of userSocketsMap.entries()) {
-        const aliveSocketIds = new Set();
-        for (const socketId of socketSet) {
-            const socket = gIo.sockets.sockets.get(socketId);
-            const socketName = socket ? socket.handshake ? socket.handshake.headers['user-agent'] : 'Unknown Socket' : 'Socket Not Found';
-
-            if (socket && socket.connected) {
-                aliveSocketIds.add(socketId);
-            } else {
-                socketSet.delete(socketId);  // מחיקה של הסוקט מהמפה של המשתמש
-                logger.info(`🧹 Removed dead socket [id: ${socketId}, Name: ${socketName}] for userId=${userId}`);
-            }
-        }
-
-        if (aliveSocketIds.size > 0) {
-            userSocketsMap.set(userId, aliveSocketIds);
-        } else {
-            userSocketsMap.delete(userId);
-            logger.info(`❌ Removed user ${userId} from map – no active sockets`);
-        }
-    }
-
-    logger.info(`✅ Cleanup complete. Active users: ${userSocketsMap.size}`);
-}
-
-async function broadcast({ type, data, room = null, userId }) {
-    userId = userId.toString();
-    logger.info(`📡 Broadcasting event: ${type}`);
-
-    if (room) {
-        // אם מוגדר room → שולחים לחדר
-        logger.info(`🏠 Broadcasting to room: ${room}`);
-        gIo.to(room).emit(type, data);
-        return;
-    }
-
-    const socketSet = userSocketsMap.get(userId) || new Set();
-    const socketsIds = Array.from(socketSet);
-        if (socketsIds.length) {
-        logger.info(`📤 Broadcasting to all sockets of user: ${userId}, excluding them`);
-        socketsIds.forEach(socketId => {
-            const socket = gIo.sockets.sockets.get(socketId);
-            if (socket && socket.connected) {
-                socket.broadcast.emit(type, data);
-                logger.info(`✅ Broadcasted to everyone excluding socketId=${socket.id}`);
-            } else {
-                logger.warn(`⚠️ Skipped disconnected socketId=${socketId}`);
-            }
-        });
-    } else {
-        logger.info(`🌍 Broadcasting to ALL users (no exclusion)`);
-        gIo.emit(type, data);
-    }
-}
-
-
-
-// If possible, send to all sockets BUT not the current socket 
-// Optionally, broadcast to a room / to all
-// async function broadcast({ type, data, room = null, userId }) {
-//     userId = userId.toString()
-
-//     logger.info(`Broadcasting event: ${type}`)
-//     const excludedSocket = await _getUserSocket(userId)
-//     if (room && excludedSocket) {
-//         logger.info(`Broadcast to room ${room} excluding user: ${userId}`)
-//         excludedSocket.broadcast.to(room).emit(type, data)
-//     } else if (excludedSocket) {
-//         logger.info(`Broadcast to all excluding user: ${userId}`)
-//         excludedSocket.broadcast.emit(type, data)
-//     } else if (room) {
-//         logger.info(`Emit to room: ${room}`)
-//         gIo.to(room).emit(type, data)
-//     } else {
-//         logger.info(`Emit to all`)
-//         gIo.emit(type, data)
-//     }
-// }
-// function _cleanDeadSockets(userId) {
-//     const sockets = [...gIo.sockets.sockets.values()]
-//         .filter(socket => socket.userId && socket.userId.toString() === userId.toString());
-
-//     sockets.forEach(socket => {
-//         if (!socket.connected) {
-//             logger.info(`🧹 Cleaning dead socket [id: ${socket.id}] for userId=${userId}`);
-//             socket.disconnect(true); // סוגר לגמרי
-//         }
-//     });
-// }
-
-function _cleanDeadSockets(userId) {
-    const socketSet = userSocketsMap.get(userId) || new Set();
-    const aliveSocketIds = new Set();
-    for (const socketId of socketSet) {
-        const socket = gIo.sockets.sockets.get(socketId);
+        const socket = io.sockets.sockets.get(socketId)
         if (socket && socket.connected) {
-            aliveSocketIds.add(socketId);
+            socket.emit('test-notification', data)
+            logger.info(`✅ Sent test-notification to socketId=${socket.id}`)
         } else {
-            logger.info(`🧹 Removing dead socket [id: ${socketId}] for userId=${userId}`);
+            logger.warn(`⚠️ Skipped socketId=${socketId} (not found or disconnected)`)
+            cleanupDeadSocket(socketId, userId)
         }
     }
-    if (aliveSocketIds.size > 0) {
-        userSocketsMap.set(userId, aliveSocketIds);
-        logger.info(`🛠️ Updated alive sockets for userId=${userId}: [${Array.from(aliveSocketIds).join(', ')}]`);
-    } else {
-        userSocketsMap.delete(userId);
-        logger.info(`🧹 All sockets dead for userId=${userId}, removed from map.`);
+}
+
+function cleanupDeadSocket(socketId, userId) {
+    const socketSet = connectedUsers.get(userId)
+    if (!socketSet) return
+
+    socketSet.delete(socketId)
+    logger.info(`🧹 Removed dead socket [id: ${socketId}] for userId=${userId}`)
+
+    if (socketSet.size === 0) {
+        connectedUsers.delete(userId)
+        logger.info(`❌ No active sockets left for userId=${userId}, removing from map.`)
     }
 }
 
-
-
-function _getUserSocket(userId) {
-    return [...gIo.sockets.sockets.values()]
-        .find(socket => socket.userId && socket.userId.toString() === userId.toString());
+function getIO() {
+    if (!io) {
+        throw new Error('Socket.io not initialized')
+    }
+    return io
 }
 
-function _getUserSockets(userId) {
-    const socketSet = userSocketsMap.get(userId) || new Set();
-    const sockets = Array.from(socketSet)
-        .map(socketId => gIo.sockets.sockets.get(socketId))
-        .filter(socket => socket && socket.connected);
-    return sockets;
+function emitToUser(userId, eventName, data) {
+    try {
+        const socket = connectedUsers.get(userId)
+        if (socket) {
+            socket.emit(eventName, data)
+            logger.info(`Emitted ${eventName} to user ${userId}`)
+        } else {
+            logger.warn(`No socket found for user ${userId}`)
+        }
+    } catch (error) {
+        logger.error(`Error emitting to user ${userId}:`, error)
+    }
 }
 
-
-async function _getAllSockets() {
-    // return all Socket instances
-    const sockets = await gIo.fetchSockets()
-    return sockets
+function emitToAll(eventName, data) {
+    try {
+        io.emit(eventName, data)
+        logger.info(`Emitted ${eventName} to all users`)
+    } catch (error) {
+        logger.error('Error emitting to all users:', error)
+    }
 }
 
-async function _printSockets() {
-    const sockets = await _getAllSockets()
-    console.log(`Sockets: (count: ${sockets.length}):`)
-    sockets.forEach(_printSocket)
-}
-function _printSocket(socket) {
-    console.log(`Socket - socketId: ${socket.id} userId: ${socket.userId}`)
-}
-
+// ייצוא הפונקציות הנדרשות
 export const socketService = {
-    // set up the sockets service and define the API
     setupSocketAPI,
-    // emit to everyone / everyone in a specific room (label)
-    emitTo,
-    // emit to a specific user (if currently active in system)
-    emitToUser,
-    // Send to all sockets BUT not the current socket - if found
-    // (otherwise broadcast to a room / to all)
-    broadcast,
-    cleanupDuplicateSocketRefs,
     emitTestNotification,
+    getIO,
+    emitToUser,
+    emitToAll,
+    getUserSockets(userId) {
+        const userSockets = [];
+        for (const [socketId, socket] of Object.entries(connectedUsers)) {
+            if (socket.userId === userId) {
+                userSockets.push(socket);
+            }
+        }
+        return userSockets;
+    },
+    emitTestNotification(data) {
+        const { userId } = data;
+        const userSockets = this.getUserSockets(userId);
+        
+        if (!userSockets || userSockets.length === 0) {
+            logger.warn(`⚠️ No active sockets found for user ${userId}`);
+            return;
+        }
+
+        logger.info(`📡 Emitting test notification to ${userSockets.length} sockets for user ${userId}`);
+        userSockets.forEach(socket => {
+            socket.emit('test-notification', data);
+        });
+    }
 }

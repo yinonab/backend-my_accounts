@@ -6,6 +6,7 @@ import { notificationService } from '../../services/notification.service.js';
 import { config } from '../../config/index.js';
 import { dbService } from '../../services/db.service.js';
 import { socketService } from '../../services/socket.service.js';
+import { NotificationToken } from '../../models/notification-token.model.js';
 
 
 
@@ -36,8 +37,9 @@ router.post('/', log, requireAuth, async (req, res) => {
         // console.log('👤 Extracted userId from token:', userId);
         // console.log('📩 Subscription Keys:', subscription ? Object.keys(subscription) : 'No subscription provided');
 
-
-        await notificationService.saveSubscription(token, userId);
+        // Ensure correct arguments order and structure for saveSubscription
+        const subscription = { token }; // Create a subscription object with the token
+        await notificationService.saveSubscription(userId, subscription);
         res.status(201).json({ message: "FCM Token saved successfully" });
     } catch (err) {
         console.error("❌ Error saving FCM Token:", err);
@@ -55,21 +57,22 @@ router.get('/vapid-public-key', async (req, res) => {
 router.get('/get-subscription', requireAuth, async (req, res) => {
     try {
         const userId = req.loggedinUser._id;
-        console.log("🔍 Checking subscription for user:", userId);
+        console.log("🔍 Checking token for user:", userId);
 
-        const collection = await dbService.getCollection(COLLECTION_NAME);
-        const userSubscription = await collection.findOne({ userId });
+        // קריאה מקולקציית tokens באמצעות המודל
+        const userToken = await NotificationToken.findOne({ userId });
 
-        if (!userSubscription) {
-            console.warn(`⚠️ No subscription found for user: ${userId}`);
-            return res.status(404).json({ error: 'No subscription found' });
+        if (!userToken) {
+            console.warn(`⚠️ No token found for user: ${userId}`);
+            return res.status(404).json({ error: 'No token found' });
         }
 
-        console.log("✅ Found subscription:", userSubscription);
-        res.status(200).json({ subscription: userSubscription.subscription });
+        console.log("✅ Found token:", userToken);
+        // החזרת אובייקט ה-token כפי שהקליינט מצפה לקבל
+        res.status(200).json({ token: userToken.token });
     } catch (err) {
-        console.error('❌ Error retrieving subscription:', err);
-        res.status(500).json({ error: 'Failed to retrieve subscription' });
+        console.error('❌ Error retrieving token:', err);
+        res.status(500).json({ error: 'Failed to retrieve token' });
     }
 });
 
@@ -92,7 +95,6 @@ router.post('/send', log, requireAuth, async (req, res) => {
 
         const userId = req.loggedinUser._id;
         const { title, body, token, type, icon } = req.body;
-        //  console.log("📩 Notification send request received:", { userId, payload });
         console.log('Extracted userId from token:', req.loggedinUser._id);
         console.log('🚀 Preparing to send notification');
         console.log('👤 User ID from Token:', userId);
@@ -107,17 +109,21 @@ router.post('/send', log, requireAuth, async (req, res) => {
         console.log("🚀 Sending notification to user:", userId);
         await notificationService.sendNotification(userId, { title, body, token, type, icon });
 
-        socketService.cleanupDuplicateSocketRefs(userId);
-
-        socketService.emitTestNotification({
-            userId,
-            data: {
-                title: title || "📢 Notification",
-                body: body || "New notification arrived",
-                messageId: `msg_${Date.now()}`,
-                timestamp: Date.now()
-            }
-        });
+        // Check if user has active socket connection before emitting
+        const userSockets = socketService.getUserSockets(userId);
+        if (userSockets && userSockets.length > 0) {
+            socketService.emitTestNotification({
+                userId,
+                data: {
+                    title: title || "📢 Notification",
+                    body: body || "New notification arrived",
+                    messageId: `msg_${Date.now()}`,
+                    timestamp: Date.now()
+                }
+            });
+        } else {
+            console.log("ℹ️ User has no active socket connection, skipping socket notification");
+        }
 
         res.status(200).json({ message: "Notification sent successfully" });
     } catch (err) {
