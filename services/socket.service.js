@@ -139,23 +139,31 @@ export function setupSocketAPI(http) {
 
     io.use(async (socket, next) => {
         try {
-            const token = socket.handshake.auth.token
+            const token = socket.handshake.auth.token;
             if (!token) {
-                return next(new Error('Authentication error'))
+                logger.error('Socket authentication error: No token provided');
+                return next(new Error('Authentication error: No token provided'));
             }
 
-            const decoded = jwt.verify(token, process.env.JWT_SECRET)
-            const user = await userService.getById(decoded._id)
-            
-            if (!user) {
-                return next(new Error('User not found'))
-            }
+            try {
+                const decoded = jwt.verify(token, process.env.JWT_SECRET);
+                const user = await userService.getById(decoded._id);
+                
+                if (!user) {
+                    logger.error(`Socket authentication error: User not found for id ${decoded._id}`);
+                    return next(new Error('Authentication error: User not found'));
+                }
 
-            socket.user = user
-            next()
+                socket.user = user;
+                logger.info(`✅ Socket authenticated for user ${user._id}`);
+                next();
+            } catch (jwtError) {
+                logger.error('Socket authentication error: Invalid token', jwtError);
+                return next(new Error('Authentication error: Invalid token'));
+            }
         } catch (err) {
-            logger.error('Socket authentication error:', err)
-            next(new Error('Authentication error'))
+            logger.error('Socket authentication error:', err);
+            next(new Error('Authentication error'));
         }
     })
 
