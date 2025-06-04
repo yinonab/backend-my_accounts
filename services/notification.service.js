@@ -1469,9 +1469,51 @@ async function sendNotification(params) {
     }
 }
 
+// Add function to check if a token exists for a user
+async function checkTokenExistence(userId) {
+    try {
+        // Find an active token for the user
+        const userToken = await NotificationToken.findOne({ userId, status: 'active' });
+        return !!userToken; // Return true if a token is found, false otherwise
+    } catch (error) {
+        logger.error(`❌ Error checking token existence for user ${userId}:`, error);
+        throw error; // Re-throw the error
+    }
+}
+
+// Add function to validate a token
+async function validateToken(token) {
+    try {
+        // Use the internal validation logic from TokenLifecycleManager or similar
+        // For now, a basic check if the token exists and is active
+        const tokenInfo = await NotificationToken.findOne({ token, status: 'active' });
+        return !!tokenInfo; // Return true if the token is found and active, false otherwise
+    } catch (error) {
+        logger.error(`❌ Error validating token ${token}:`, error);
+        throw error; // Re-throw the error
+    }
+}
+
+// Add function to get subscription details for a user (similar to the route logic)
+async function getSubscription(userId) {
+    try {
+        const userToken = await NotificationToken.findOne({ userId });
+        if (!userToken) {
+            return null; // Or throw an error if expected to always exist
+        }
+        return { token: userToken.token }; // Return the token in the expected format
+    } catch (error) {
+        logger.error(`❌ Error retrieving subscription for user ${userId}:`, error);
+        throw error; // Re-throw the error
+    }
+}
+
 export const notificationService = {
     saveSubscription,
     sendNotification,
     removeSubscription,
-    ensureIndexes
+    ensureIndexes,
+    checkTokenExistence,
+    validateToken,
+    getSubscription
 };

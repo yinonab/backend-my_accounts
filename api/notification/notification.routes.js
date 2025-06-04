@@ -46,6 +46,66 @@ router.post('/', log, requireAuth, async (req, res) => {
         res.status(500).json({ error: "Failed to save FCM Token" });
     }
 });
+
+// Add route to check if token exists (GET /check-token)
+router.get('/check-token', requireAuth, async (req, res) => {
+    try {
+        const userId = req.loggedinUser._id;
+        console.log("🔍 Checking token existence for user:", userId);
+
+        // Assuming notificationService has a method like checkTokenExistence
+        const exists = await notificationService.checkTokenExistence(userId);
+
+        res.status(200).json({ exists });
+    } catch (err) {
+        console.error("❌ Error checking token existence:", err);
+        res.status(500).json({ error: "Failed to check token existence" });
+    }
+});
+
+// Add route to save subscription/token (POST /save-subscription) - similar to POST /
+router.post('/save-subscription', log, requireAuth, async (req, res) => {
+    try {
+        const { token } = req.body;
+        const userId = req.loggedinUser._id;
+
+        if (!token) {
+            return res.status(400).json({ error: "FCM Token is required" });
+        }
+
+        console.log("🔔 Saving FCM Token for user:", userId);
+        console.log("🔔 Saving FCM Token for user:", token);
+
+        const subscription = { token };
+        // Assuming notificationService.saveSubscription handles saving the token
+        await notificationService.saveSubscription(userId, subscription);
+        res.status(201).json({ message: "FCM Token saved successfully" });
+    } catch (err) {
+        console.error("❌ Error saving FCM Token:", err);
+        res.status(500).json({ error: "Failed to save FCM Token" });
+    }
+});
+
+// Add route to validate token (POST /validate-token)
+router.post('/validate-token', requireAuth, async (req, res) => {
+    try {
+        const { token } = req.body;
+        console.log("🔍 Validating token:", token);
+
+        if (!token) {
+             return res.status(400).json({ error: "FCM Token is required" });
+        }
+
+        // Assuming notificationService has a method like validateToken
+        const isValid = await notificationService.validateToken(token);
+
+        res.status(200).json({ isValid });
+    } catch (err) {
+        console.error("❌ Error validating token:", err);
+        res.status(500).json({ error: "Failed to validate token" });
+    }
+});
+
 router.get('/vapid-public-key', async (req, res) => {
     try {
         res.json({ vapidPublicKey: config.notifications.vapidPublicKey });
