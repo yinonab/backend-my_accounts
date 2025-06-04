@@ -223,6 +223,55 @@ export function setupSocketAPI(http) {
             userId: socket.user._id
         })
 
+        // Handle client sending their user ID after connection (re-auth/explicit login)
+        socket.on('set-user-socket', ({ userId, username }) => {
+            try {
+                if (socket.user && socket.user._id === userId) {
+                    logger.info(`🔐 Client explicitly set socket for already authenticated user: ${userId} [socket id: ${socket.id}]`);
+                    // Ensure socket is in connectedUsers if for some reason it wasn't added on 'connection'
+                    if (!connectedUsers.has(userId)) {
+                        connectedUsers.set(userId, new Set());
+                    }
+                    if (!connectedUsers.get(userId).has(socket)){
+                        connectedUsers.get(userId).add(socket);
+                        logger.info(`🔗 Added socket ${socket.id} to connectedUsers for user ${userId}`);
+                    }
+                } else {
+                    // This case should ideally not happen if auth middleware works correctly
+                    logger.warn(`⚠️ Client attempted to set socket for user ID ${userId} but socket authenticated as ${socket.user?._id} [socket id: ${socket.id}]`);
+                    // Optionally, force disconnect the socket due to auth mismatch
+                    // socket.disconnect(true);
+                }
+            } catch (error) {
+                logger.error(`❌ Error handling set-user-socket for userId ${userId}: ${error.message}`);
+            }
+        });
+
+        // Handle client explicitly unsetting their user ID (logout)
+        socket.on('unset-user-socket', () => {
+            try {
+                if (socket.user) {
+                    const userId = socket.user._id;
+                    logger.info(`👋 Client explicitly requested unset socket for user: ${userId} [socket id: ${socket.id}]`);
+                    const userSockets = connectedUsers.get(userId);
+                    if (userSockets) {
+                        userSockets.delete(socket);
+                        if (userSockets.size === 0) {
+                            connectedUsers.delete(userId);
+                            logger.info(`❌ No active sockets left for userId=${userId}, removing from map.`);
+                        } else {
+                            logger.info(`Remaining sockets for user ${userId}: ${userSockets.size}`);
+                        }
+                    }
+                    // The 'disconnect' handler will clean up connectionManager
+                } else {
+                    logger.warn(`⚠️ unset-user-socket received from unauthenticated socket [id: ${socket.id}]`);
+                }
+            } catch (error) {
+                logger.error(`❌ Error handling unset-user-socket: ${error.message}`);
+            }
+        });
+
         // הגדרת event handlers
         socket.on('heartbeat', () => {
             try {
