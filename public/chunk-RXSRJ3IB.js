@@ -1,0 +1,1 @@
+import{c as o,d as n}from"./chunk-DOWI7X6J.js";import{e as c,h as e}from"./chunk-BQITRQ3M.js";var s,a=c(()=>{n();s=class extends o{startService(){return e(this,null,function*(){console.log("Background service is not available on web")})}stopService(){return e(this,null,function*(){console.log("Background service stopped (web)")})}}});a();export{s as BackgroundServiceWeb};

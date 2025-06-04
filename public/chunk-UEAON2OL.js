@@ -1,0 +1,1 @@
+import{b as r,d as c}from"./chunk-DOWI7X6J.js";import{e}from"./chunk-BQITRQ3M.js";var o=e(()=>{"use strict"});var g,i=e(()=>{c();o();g=r("BackgroundService",{web:()=>import("./chunk-RXSRJ3IB.js").then(t=>new t.BackgroundServiceWeb)})});i();export{g as BackgroundService};
