@@ -8,8 +8,6 @@ import { dbService } from '../../services/db.service.js';
 import { socketService } from '../../services/socket.service.js';
 import { NotificationToken } from '../../models/notification-token.model.js';
 
-
-
 const COLLECTION_NAME = 'notifications';
 const router = express.Router();
 
@@ -48,7 +46,7 @@ router.post('/', log, requireAuth, async (req, res) => {
 });
 
 // Add route to check if token exists (GET /check-token)
-router.get('/check-token', requireAuth, async (req, res) => {
+router.post('/check-token', requireAuth, async (req, res) => {
     try {
         const userId = req.loggedinUser._id;
         console.log("🔍 Checking token existence for user:", userId);
@@ -73,12 +71,20 @@ router.post('/save-subscription', log, requireAuth, async (req, res) => {
             return res.status(400).json({ error: "FCM Token is required" });
         }
 
-        console.log("🔔 Saving FCM Token for user:", userId);
-        console.log("🔔 Saving FCM Token for user:", token);
+        console.log("🔍 Checking if token exists for user:", userId);
+        
+        // בדיקה אם הטוקן כבר קיים
+        const existingToken = await NotificationToken.findOne({ userId });
+        if (existingToken) {
+            console.log("✅ Token already exists for user:", userId);
+            return res.status(200).json({ message: "Token already exists" });
+        }
 
+        console.log("🔔 Saving new FCM Token for user:", userId);
         const subscription = { token };
-        // Assuming notificationService.saveSubscription handles saving the token
         await notificationService.saveSubscription(userId, subscription);
+        
+        console.log("✅ FCM Token saved successfully for user:", userId);
         res.status(201).json({ message: "FCM Token saved successfully" });
     } catch (err) {
         console.error("❌ Error saving FCM Token:", err);
