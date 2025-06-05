@@ -12,82 +12,98 @@ const COLLECTION_NAME = 'notifications';
 const router = express.Router();
 
 // נרשם לנוטיפיקציות
-router.post('/', log, requireAuth, async (req, res) => {
-    try {
-        const { token } = req.body;
-        const userId = req.loggedinUser._id;
+// router.post('/', log, requireAuth, async (req, res) => {
+//     try {
+//         const { token } = req.body;
+//         const userId = req.loggedinUser._id;
+//
+//         if (!token) {
+//             return res.status(400).json({ error: "FCM Token is required" });
+//         }
+//
+//         console.log("🔔 Saving FCM Token for user:", userId);
+//         console.log("🔔 Saving FCM Token for user:", token);
+//
+//         // לוג בטוח יותר
+//         // console.log('Received request to save subscription:', {
+//         //     userId,
+//         //     subscriptionDetails: subscription ?
+//         //         JSON.stringify(Object.keys(subscription)) :
+//         //         'No subscription provided'
+//         // });
+//         // console.log('🔔 Received request to save subscription');
+//         // console.log('👤 Extracted userId from token:', userId);
+//         // console.log('📩 Subscription Keys:', subscription ? Object.keys(subscription) : 'No subscription provided');
+//
+//         // Ensure correct arguments order and structure for saveSubscription
+//         const subscription = { token }; // Create a subscription object with the token
+//         await notificationService.saveSubscription(userId, subscription);
+//         res.status(201).json({ message: "FCM Token saved successfully" });
+//     } catch (err) {
+//         console.error("❌ Error saving FCM Token:", err);
+//         res.status(500).json({ error: "Failed to save FCM Token" });
+//     }
+// });
 
-        if (!token) {
-            return res.status(400).json({ error: "FCM Token is required" });
-        }
-
-        console.log("🔔 Saving FCM Token for user:", userId);
-        console.log("🔔 Saving FCM Token for user:", token);
-
-        // לוג בטוח יותר
-        // console.log('Received request to save subscription:', {
-        //     userId,
-        //     subscriptionDetails: subscription ?
-        //         JSON.stringify(Object.keys(subscription)) :
-        //         'No subscription provided'
-        // });
-        // console.log('🔔 Received request to save subscription');
-        // console.log('👤 Extracted userId from token:', userId);
-        // console.log('📩 Subscription Keys:', subscription ? Object.keys(subscription) : 'No subscription provided');
-
-        // Ensure correct arguments order and structure for saveSubscription
-        const subscription = { token }; // Create a subscription object with the token
-        await notificationService.saveSubscription(userId, subscription);
-        res.status(201).json({ message: "FCM Token saved successfully" });
-    } catch (err) {
-        console.error("❌ Error saving FCM Token:", err);
-        res.status(500).json({ error: "Failed to save FCM Token" });
-    }
-});
-
-// Add route to check if token exists (GET /check-token)
+// Add route to check if token exists (POST /check-token)
 router.post('/check-token', requireAuth, async (req, res) => {
     try {
         const userId = req.loggedinUser._id;
-        console.log("🔍 Checking token existence for user:", userId);
+        const { token } = req.body;
+        console.log(`🔍 Checking token existence for user: ${userId}, token: ${token ? token.substring(0, 10) + '...' : 'N/A'}`);
 
-        // Assuming notificationService has a method like checkTokenExistence
-        const exists = await notificationService.checkTokenExistence(userId);
+        if (!token) {
+             console.warn("⚠️ Token is missing in check-token request");
+             return res.status(400).json({ error: "FCM Token is required" });
+        }
 
-        res.status(200).json({ exists });
+        // Check if a document with both userId and the specific token exists
+        const exists = await NotificationToken.findOne({ userId, token });
+
+        console.log(`✅ Token existence check for user ${userId}: ${exists ? 'Exists' : 'Does Not Exist'}`);
+        res.status(200).json({ exists: !!exists });
     } catch (err) {
         console.error("❌ Error checking token existence:", err);
         res.status(500).json({ error: "Failed to check token existence" });
     }
 });
 
-// Add route to save subscription/token (POST /save-subscription) - similar to POST /
+// Add route to save subscription/token (POST /save-subscription)
 router.post('/save-subscription', log, requireAuth, async (req, res) => {
     try {
         const { token } = req.body;
         const userId = req.loggedinUser._id;
 
         if (!token) {
+            console.warn("⚠️ Token is missing in save-subscription request");
             return res.status(400).json({ error: "FCM Token is required" });
         }
 
-        console.log("🔍 Checking if token exists for user:", userId);
-        
-        // בדיקה אם הטוקן כבר קיים
-        const existingToken = await NotificationToken.findOne({ userId });
+        console.log(`🔍 Checking if token already exists for user: ${userId}, token: ${token.substring(0, 10) + '...'}`);
+
+        // Check if the exact token already exists for this user
+        const existingToken = await NotificationToken.findOne({ userId, token });
         if (existingToken) {
-            console.log("✅ Token already exists for user:", userId);
+            console.log(`✅ Token already exists for user ${userId}. Skipping save.`);
+            // Return 200 OK or 409 Conflict, depending on desired client behavior
             return res.status(200).json({ message: "Token already exists" });
+            // Or to indicate a conflict:
+            // return res.status(409).json({ error: "Token already exists" });
         }
 
-        console.log("🔔 Saving new FCM Token for user:", userId);
+        console.log(`🔔 Saving new FCM Token for user: ${userId}`);
         const subscription = { token };
+        // Assuming notificationService.saveSubscription handles creating a new document if not found
+        // or updating if needed based on userId, but the findOne above prevents duplicates.
+        // We might need to adjust notificationService.saveSubscription if it expects to handle existence.
+        // For now, assuming it simply saves a new token.
         await notificationService.saveSubscription(userId, subscription);
-        
-        console.log("✅ FCM Token saved successfully for user:", userId);
+
+        console.log(`✅ FCM Token saved successfully for user: ${userId}`);
         res.status(201).json({ message: "FCM Token saved successfully" });
     } catch (err) {
-        console.error("❌ Error saving FCM Token:", err);
+        console.error(`❌ Error saving FCM Token for user ${userId}:`, err);
+        // More specific error handling could go here based on err content
         res.status(500).json({ error: "Failed to save FCM Token" });
     }
 });
@@ -96,18 +112,22 @@ router.post('/save-subscription', log, requireAuth, async (req, res) => {
 router.post('/validate-token', requireAuth, async (req, res) => {
     try {
         const { token } = req.body;
-        console.log("🔍 Validating token:", token);
+        console.log(`🔍 Validating token for user: ${req.loggedinUser._id}, token: ${token ? token.substring(0, 10) + '...' : 'N/A'}`);
 
         if (!token) {
+             console.warn("⚠️ Token is missing in validate-token request");
              return res.status(400).json({ error: "FCM Token is required" });
         }
 
-        // Assuming notificationService has a method like validateToken
+        // Assuming notificationService has a method like validateToken that interacts with Firebase/FCM
         const isValid = await notificationService.validateToken(token);
 
+        console.log(`✅ Token validation result for user ${req.loggedinUser._id}: ${isValid}`);
         res.status(200).json({ isValid });
     } catch (err) {
-        console.error("❌ Error validating token:", err);
+        console.error(`❌ Error validating token for user ${req.loggedinUser._id}:`, err);
+        // Log the error details for debugging
+        console.error('Validation error details:', err);
         res.status(500).json({ error: "Failed to validate token" });
     }
 });
