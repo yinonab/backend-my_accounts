@@ -104,10 +104,10 @@ messaging.onBackgroundMessage(async (payload) => {
     }
 
     // 🔇 **אם זו הודעת keep-alive, לא מציגים נוטיפיקציה**
-    // if (payload.data?.type === "keep-alive") {
-    //     console.log("🔕 Silent Keep-Alive message received - keeping app awake.");
-    //     return; // ✅ מסיים כאן כדי שלא תוצג נוטיפיקציה
-    // }
+    if (payload.data?.type === "keep-alive") {
+        console.log("🔕 Silent Keep-Alive message received - keeping app awake.");
+        return; // ✅ מסיים כאן כדי שלא תוצג נוטיפיקציה
+    }
 
     // ⚠️ לא משתמשים ב-payload.notification, אלא רק ב-payload.data
     const notificationTitle = payload.data?.title || "🔔 הודעה חדשה";
@@ -171,11 +171,11 @@ self.addEventListener("push", async function (event) {
     }
 
     // ✅ בדיקה אם ה-Token המתקבל תואם ל-Token השמור
-    // const savedToken = await getTokenFromDB();
-    // if (notificationData.token !== savedToken) {
-    //     console.warn("⚠️ Token mismatch! Skipping notification.");
-    //     return; // אם ה-Token לא תואם למשתמש הנוכחי – אל תציג נוטיפיקציה
-    // }
+    const savedToken = await getTokenFromDB();
+    if (notificationData.token !== savedToken) {
+        console.warn("⚠️ Token mismatch! Skipping notification.");
+        return; // אם ה-Token לא תואם למשתמש הנוכחי – אל תציג נוטיפיקציה
+    }
 
     if (notificationData.wakeUpApp) {
         console.log("📲 Sending WAKE_UP message to clients");
